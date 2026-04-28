@@ -2,7 +2,7 @@
 cmsDriver.py Configuration/GenProduction/python/MinBias_Hydjet_Drum5F_PbPb_5360GeV.py --eventcontent FEVTDEBUG --customise Configuration/DataProcessing/Utils.addMonitoring --datatier GEN-SIM --conditions 140X_mcRun4_realistic_v4 --beamspot HLLHC14TeV --step GEN,SIM --geometry Extended2026D110 --era Phase2C17I13M9 --python_filename step1_hydjet.py --fileout file:step1_hydjet.root --no_exec --mc -n 100
 
 # Generating STARLight QED dimuons - step 1
-cmsDriver.py Configuration/GenProduction/python/STARLIGHT_QED_muon-fragment.py --eventcontent FEVTDEBUG --customise Configuration/DataProcessing/Utils.addMonitoring --datatier GEN-SIM --conditions 140X_mcRun4_realistic_v4 --beamspot HLLHC14TeV --step LHE,GEN,SIM --geometry Extended2026D110 --era Phase2C17I13M9 --python_filename step1.py --fileout file:step1.root --no_exec --mc -n 1000
+cmsDriver.py Configuration/GenProduction/python/STARLIGHT_QED_muon_pmin0-fragment.py --eventcontent FEVTDEBUG --customise Configuration/DataProcessing/Utils.addMonitoring --datatier GEN-SIM --conditions 140X_mcRun4_realistic_v4 --beamspot HLLHC14TeV --step LHE,GEN,SIM --geometry Extended2026D110 --era Phase2C17I13M9 --python_filename step1.py --fileout file:step1.root --no_exec --mc -n 1000
 
 # DIGI-RAW - step 2
 cmsDriver.py  --eventcontent FEVTDEBUGHLT --customise SLHCUpgradeSimulations/Configuration/aging.customise_aging_1000,SimGeneral/MixingModule/customiseStoredTPConfig.higherPtTP,Configuration/DataProcessing/Utils.addMonitoring --datatier GEN-SIM-DIGI-RAW --conditions 140X_mcRun4_realistic_v4 --step DIGI:pdigi_valid,L1TrackTrigger,L1,DIGI2RAW,HLT:@relval2026 --geometry Extended2026D110 --era Phase2C17I13M9 --python_filename step2.py --fileout file:step2.root --filein file:step1.root --no_exec --mc  -n -1
