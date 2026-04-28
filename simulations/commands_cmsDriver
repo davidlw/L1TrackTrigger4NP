@@ -1,0 +1,28 @@
+# Generating HYDJET PbPb events - step 1
+cmsDriver.py Configuration/GenProduction/python/MinBias_Hydjet_Drum5F_PbPb_5360GeV.py --eventcontent FEVTDEBUG --customise Configuration/DataProcessing/Utils.addMonitoring --datatier GEN-SIM --conditions 140X_mcRun4_realistic_v4 --beamspot HLLHC14TeV --step GEN,SIM --geometry Extended2026D110 --era Phase2C17I13M9 --python_filename step1_hydjet.py --fileout file:step1_hydjet.root --no_exec --mc -n 100
+
+# Generating STARLight QED dimuons - step 1
+cmsDriver.py Configuration/GenProduction/python/STARLIGHT_QED_muon-fragment.py --eventcontent FEVTDEBUG --customise Configuration/DataProcessing/Utils.addMonitoring --datatier GEN-SIM --conditions 140X_mcRun4_realistic_v4 --beamspot HLLHC14TeV --step LHE,GEN,SIM --geometry Extended2026D110 --era Phase2C17I13M9 --python_filename step1.py --fileout file:step1.root --no_exec --mc -n 1000
+
+# DIGI-RAW - step 2
+cmsDriver.py  --eventcontent FEVTDEBUGHLT --customise SLHCUpgradeSimulations/Configuration/aging.customise_aging_1000,SimGeneral/MixingModule/customiseStoredTPConfig.higherPtTP,Configuration/DataProcessing/Utils.addMonitoring --datatier GEN-SIM-DIGI-RAW --conditions 140X_mcRun4_realistic_v4 --step DIGI:pdigi_valid,L1TrackTrigger,L1,DIGI2RAW,HLT:@relval2026 --geometry Extended2026D110 --era Phase2C17I13M9 --python_filename step2.py --fileout file:step2.root --filein file:step1.root --no_exec --mc  -n -1
+
+# RECO - step 3
+cmsDriver.py  --eventcontent MINIAODSIM --customise SLHCUpgradeSimulations/Configuration/aging.customise_aging_1000,Configuration/DataProcessing/Utils.addMonitoring --datatier GEN-SIM-DIGI-RAW-MINIAOD --inputCommands "keep *" --conditions 140X_mcRun4_realistic_v4 --customise_commands "process.MINIAODSIMoutput.outputCommands.append('keep *_*_*_HLT'); process.MINIAODSIMoutput.outputCommands.append('keep *_*_*_SIM');" --step RAW2DIGI,RECO,RECOSIM,PAT --geometry Extended2026D110 --era Phase2C17I13M9 --python_filename step3.py --fileout file:step3.root --filein file:step2.root --no_exec --mc -n -1
+
+# L1 track trigger re-emulation
+cmsDriver.py -s L1TrackTrigger,L1,L1P2GT,NANO \
+--conditions 140X_mcRun4_realistic_v4 \
+--geometry ExtendedRun4D110 \
+--era Phase2C17I13M9 \
+--eventcontent NANOAOD \
+--datatier GEN-SIM-DIGI-RAW-MINIAOD \
+--customise SLHCUpgradeSimulations/Configuration/aging.customise_aging_1000,Configuration/DataProcessing/Utils.addMonitoring,L1Trigger/Configuration/customisePhase2TTOn110.customisePhase2TTOn110 \
+--filein file:step3.root \
+--fileout file:output_Phase2_L1T.root \
+--python_filename rerunL1_cfg.py \
+--inputCommands="keep *, drop l1tPFJets_*_*_*, drop l1tTrackerMuons_l1tTkMuonsGmt*_*_HLT" \
+--mc \
+-n -1 --no_exec
+
+
