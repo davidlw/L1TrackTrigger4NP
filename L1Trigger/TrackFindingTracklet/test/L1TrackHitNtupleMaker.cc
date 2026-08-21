@@ -210,6 +210,7 @@ private:
   std::vector<float>* m_tp_eta;
   std::vector<float>* m_tp_phi;
   std::vector<float>* m_tp_lxy;
+  std::vector<int>* m_tp_ngenpart;  // # of associated GenParticles; 0 => produced by GEANT
   std::vector<float>* m_tp_d0;
   std::vector<float>* m_tp_z0;
   std::vector<float>* m_tp_d0_prod;
@@ -402,6 +403,7 @@ void L1TrackHitNtupleMaker::endJob() {
   delete m_tp_eta;
   delete m_tp_phi;
   delete m_tp_lxy;
+  delete m_tp_ngenpart;
   delete m_tp_d0;
   delete m_tp_z0;
   delete m_tp_d0_prod;
@@ -543,6 +545,7 @@ void L1TrackHitNtupleMaker::beginJob() {
   m_tp_eta = new std::vector<float>;
   m_tp_phi = new std::vector<float>;
   m_tp_lxy = new std::vector<float>;
+  m_tp_ngenpart = new std::vector<int>;
   m_tp_d0 = new std::vector<float>;
   m_tp_z0 = new std::vector<float>;
   m_tp_d0_prod = new std::vector<float>;
@@ -674,6 +677,14 @@ void L1TrackHitNtupleMaker::beginJob() {
   eventTree->Branch("tp_eta", &m_tp_eta);
   eventTree->Branch("tp_phi", &m_tp_phi);
   eventTree->Branch("tp_lxy", &m_tp_lxy);
+  // Number of GenParticles associated to the TrackingParticle.
+  //   > 0  -> the particle came from the event generator
+  //   == 0 -> it was created by GEANT during detector simulation (decay in flight,
+  //           conversion, nuclear interaction, delta ray, ...)
+  // Select generator particles with tp_ngenpart > 0. This uses only the size of the
+  // RefVector, so it does not dereference the GenParticle collection and is safe even
+  // if that collection was dropped from the input file (unlike TrackingParticle::status()).
+  eventTree->Branch("tp_ngenpart", &m_tp_ngenpart);
   eventTree->Branch("tp_d0", &m_tp_d0);
   eventTree->Branch("tp_z0", &m_tp_z0);
   eventTree->Branch("tp_d0_prod", &m_tp_d0_prod);
@@ -791,7 +802,7 @@ void L1TrackHitNtupleMaker::analyze(const edm::Event& iEvent, const edm::EventSe
     m_trk_injet_vhighpt->clear(); m_trk_layers->clear();
   }
 
-  m_tp_pt->clear(); m_tp_eta->clear(); m_tp_phi->clear(); m_tp_lxy->clear(); m_tp_d0->clear(); m_tp_z0->clear();
+  m_tp_pt->clear(); m_tp_eta->clear(); m_tp_phi->clear(); m_tp_lxy->clear(); m_tp_ngenpart->clear(); m_tp_d0->clear(); m_tp_z0->clear();
   m_tp_d0_prod->clear(); m_tp_z0_prod->clear(); m_tp_pdgid->clear(); m_tp_nmatch->clear(); m_tp_nstub->clear();
   m_tp_eventid->clear(); m_tp_charge->clear(); m_tp_injet->clear(); m_tp_injet_highpt->clear(); m_tp_injet_vhighpt->clear();
 
@@ -1159,7 +1170,8 @@ void L1TrackHitNtupleMaker::analyze(const edm::Event& iEvent, const edm::EventSe
     }
 
     m_tp_pt->push_back(iterTP->pt()); m_tp_eta->push_back(iterTP->eta()); m_tp_phi->push_back(iterTP->phi());
-    m_tp_lxy->push_back(lxy); m_tp_z0->push_back(iterTP->vz()); m_tp_pdgid->push_back(tmp_tp_pdgid);
+    m_tp_lxy->push_back(lxy);
+    m_tp_ngenpart->push_back((int)iterTP->genParticles().size()); m_tp_z0->push_back(iterTP->vz()); m_tp_pdgid->push_back(tmp_tp_pdgid);
     m_tp_nmatch->push_back(nMatch); m_tp_nstub->push_back(nStubTP); m_tp_charge->push_back(iterTP->charge());
 
     if (nMatch > 0) {

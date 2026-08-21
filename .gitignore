@@ -1,0 +1,6 @@
+.DS_Store
+**/.DS_Store
+
+# Generated analysis products -- regenerate with the compare_*/plot_* macros
+analyses/*/output/
+analyses/*/figures/

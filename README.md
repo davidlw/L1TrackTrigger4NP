@@ -20,6 +20,21 @@ mkdir -p Configuration/GenProduction/python # put fragments you plan to use here
 ### step 1 for GEN-SIM; step 2 for DIGI-RAW - this step produces the output needed for L1 track trigger emulation; step 3: offline reco
 ### example crab config files can also be found in L1TrackTrigger4NP/simulations
 
+## IMPORTANT for low-pT studies: the truth pT cut lives in step 2
+
+The TrackingParticle collection is filtered in the mixing module at DIGI time, not
+in the ntuplizer. The customisation `SimGeneral/MixingModule/customiseStoredTPConfig.higherPtTP`
+sets `process.mix.digitizers.mergedtruth.select.ptMinTP = 1.0` GeV (CMSSW default: 0.1).
+
+Samples produced with it contain almost no truth particles below 1 GeV, so tracking
+efficiency below 1 GeV cannot be measured from them at all - the denominator is
+missing. This is upstream of both the stub definition and the ntuplizer, so neither
+`TP_minPt` nor the dummy-stub configuration can recover it.
+
+`commands_cmsDriver` now sets `ptMinTP` explicitly and keeps the old command
+commented out for reproducing the existing samples. Regenerating from step 2 is
+required to study the sub-GeV region.
+
 ## Producing L1 track ntuple with clusters information:
 
 cmsrel CMSSW_15_1_0_patch3

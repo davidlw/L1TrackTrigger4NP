@@ -169,7 +169,13 @@ process.load('SimTracker.TrackTriggerAssociation.TrackTriggerAssociator_cff')
 process.L1TrackHitNtupleMaker.L1TrackInputTag = cms.InputTag("l1tTTTracksFromExtendedTrackletEmulation", "Level1TTTracks")
 process.L1TrackHitNtupleMaker.L1StubInputTag = cms.InputTag("TTStubsFromPhase2TrackerDigis", "StubAccepted")
 process.L1TrackHitNtupleMaker.MCTruthTrackInputTag = cms.InputTag("TTTrackAssociatorFromPixelDigis", "Level1TTTracks")
-process.L1TrackHitNtupleMaker.TP_minPt = cms.double(0)
+# NOTE: TP_minPt = 0 here does NOT give truth particles down to 0 pT. The
+# TrackingParticle collection is already filtered upstream, in the mixing module
+# at DIGI time (step 2), by
+#   process.mix.digitizers.mergedtruth.select.ptMinTP
+# which the customisation SimGeneral/MixingModule/customiseStoredTPConfig.higherPtTP
+# sets to 1.0 GeV. Existing samples therefore have essentially nothing below 1 GeV
+# regardless of what is set here. See simulations/commands_cmsDriver.
 process.L1TrackHitNtupleMaker.TP_minPt = cms.double(0)
 process.L1TrackHitNtupleMaker.L1Tk_minNStub = cms.int32(3)    
 process.L1TrackHitNtupleMaker.TP_minNStub = cms.int32(3)

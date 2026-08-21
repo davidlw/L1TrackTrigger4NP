@@ -9,6 +9,9 @@ config.General.transferLogs = False
 config.JobType.pluginName = 'Analysis'
 config.JobType.psetName = 'step2.py' # The config file for DIGI-L1-DIGI2RAW
 config.JobType.maxMemoryMB = 10000             # DIGI step for Hydjet is memory intensive
+# Must equal process.options.numberOfThreads in step2.py, which comes from the
+# cmsDriver --nThreads flag (see simulations/commands_cmsDriver). CRAB rejects the
+# submission if they disagree; cmsDriver defaults to 1 when --nThreads is omitted.
 config.JobType.numCores = 4
 
 config.Data.inputDataset = '/StarLightJpsiPhase2_PrivateMC/phys_heavyions-Step1_CMSSW_14_0_6v2-24797504def601b91dafdc41d7d2f39b/USER'

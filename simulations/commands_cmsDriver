@@ -5,7 +5,35 @@ cmsDriver.py Configuration/GenProduction/python/MinBias_Hydjet_Drum5F_PbPb_5360G
 cmsDriver.py Configuration/GenProduction/python/STARLIGHT_QED_muon_pmin0-fragment.py --eventcontent FEVTDEBUG --customise Configuration/DataProcessing/Utils.addMonitoring --datatier GEN-SIM --conditions 140X_mcRun4_realistic_v4 --beamspot HLLHC14TeV --step LHE,GEN,SIM --geometry Extended2026D110 --era Phase2C17I13M9 --python_filename step1.py --fileout file:step1.root --no_exec --mc -n 1000
 
 # DIGI-RAW - step 2
-cmsDriver.py  --eventcontent FEVTDEBUGHLT --customise SLHCUpgradeSimulations/Configuration/aging.customise_aging_1000,SimGeneral/MixingModule/customiseStoredTPConfig.higherPtTP,Configuration/DataProcessing/Utils.addMonitoring --datatier GEN-SIM-DIGI-RAW --conditions 140X_mcRun4_realistic_v4 --step DIGI:pdigi_valid,L1TrackTrigger,L1,DIGI2RAW,HLT:@relval2026 --geometry Extended2026D110 --era Phase2C17I13M9 --python_filename step2.py --fileout file:step2.root --filein file:step1.root --no_exec --mc  -n -1
+#
+# IMPORTANT for low-pT studies: the TrackingParticle collection is filtered HERE,
+# in the mixing module, not in the ntuplizer. The customisation
+#   SimGeneral/MixingModule/customiseStoredTPConfig.higherPtTP
+# sets  process.mix.digitizers.mergedtruth.select.ptMinTP = 1.0  (GeV), against a
+# CMSSW default of 0.1. Samples produced with it have essentially no truth
+# particles below 1 GeV -- measured on EPOS pPb, the stored tp_pt spectrum jumps
+# by a factor ~60-95 across the 1.0 GeV boundary, and only ~1% of TPs sit below it.
+#
+# That cut is upstream of everything: no ntuple setting can recover the discarded
+# particles, and no stub configuration (default or dummy) can either, because the
+# truth particles are dropped before stubs are built. Efficiency below 1 GeV is
+# therefore unmeasurable in samples produced with higherPtTP.
+#
+# The command below drops higherPtTP and sets ptMinTP explicitly so the value is
+# visible and tunable. Note this makes the TP collection much larger -- a real
+# cost in DIGI-RAW size for heavy-ion samples, which is presumably why the 1 GeV
+# cut was there. Raise ptMinTP toward the old value if the sample gets unwieldy,
+# but keep it below the lowest pT you intend to study.
+#
+# THREADS: --nThreads must match config.JobType.numCores in crab_step2_cfg.py.
+# cmsDriver defaults to numberOfThreads = 1, so without --nThreads the PSet and the
+# crab config disagree and CRAB refuses the submission. Currently both are 4 --
+# change them together or not at all.
+cmsDriver.py  --eventcontent FEVTDEBUGHLT --customise SLHCUpgradeSimulations/Configuration/aging.customise_aging_1000,Configuration/DataProcessing/Utils.addMonitoring --customise_commands "process.mix.digitizers.mergedtruth.select.ptMinTP = 0.3" --datatier GEN-SIM-DIGI-RAW --conditions 140X_mcRun4_realistic_v4 --step DIGI:pdigi_valid,L1TrackTrigger,L1,DIGI2RAW,HLT:@relval2026 --geometry Extended2026D110 --era Phase2C17I13M9 --nThreads 4 --python_filename step2.py --fileout file:step2.root --filein file:step1.root --no_exec --mc  -n -1
+
+# DIGI-RAW - step 2, LEGACY (1 GeV truth cut) -- kept for reproducing the existing
+# samples. Do not use for low-pT studies.
+# cmsDriver.py  --eventcontent FEVTDEBUGHLT --customise SLHCUpgradeSimulations/Configuration/aging.customise_aging_1000,SimGeneral/MixingModule/customiseStoredTPConfig.higherPtTP,Configuration/DataProcessing/Utils.addMonitoring --datatier GEN-SIM-DIGI-RAW --conditions 140X_mcRun4_realistic_v4 --step DIGI:pdigi_valid,L1TrackTrigger,L1,DIGI2RAW,HLT:@relval2026 --geometry Extended2026D110 --era Phase2C17I13M9 --nThreads 4 --python_filename step2.py --fileout file:step2.root --filein file:step1.root --no_exec --mc  -n -1
 
 # RECO - step 3
 cmsDriver.py  --eventcontent MINIAODSIM --customise SLHCUpgradeSimulations/Configuration/aging.customise_aging_1000,Configuration/DataProcessing/Utils.addMonitoring --datatier GEN-SIM-DIGI-RAW-MINIAOD --inputCommands "keep *" --conditions 140X_mcRun4_realistic_v4 --customise_commands "process.MINIAODSIMoutput.outputCommands.append('keep *_*_*_HLT'); process.MINIAODSIMoutput.outputCommands.append('keep *_*_*_SIM');" --step RAW2DIGI,RECO,RECOSIM,PAT --geometry Extended2026D110 --era Phase2C17I13M9 --python_filename step3.py --fileout file:step3.root --filein file:step2.root --no_exec --mc -n -1
