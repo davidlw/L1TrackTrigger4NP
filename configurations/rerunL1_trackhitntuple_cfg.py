@@ -98,8 +98,18 @@ from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic_T33', '')
 
 # Path and EndPath definitions
-#process.StubRECO_step = cms.Path(process.TrackTriggerStubs)
-#process.L1TrackTrigger_step = cms.Path(process.L1TrackTrigger)
+# RE-EMULATION. This path rebuilds the whole L1 track chain in THIS process:
+#   TTClustersFromPhase2TrackerDigis -> TTStubsFromPhase2TrackerDigis -> ProducerDTC
+#   -> l1tTTTracksFrom(Extended)TrackletEmulation -> TTTrackAssociatorFromPixelDigis*
+# It must be scheduled, and scheduled FIRST. Without it the ntuple silently reads
+# the L1 tracks already in the input file (process HLT, made at step 2), so any
+# change to the L1 algorithm -- dummy stubs included -- does not show up at all.
+# Verified: with this path the tracks carry the current process name; without it a
+# process-pinned tag finds zero.
+#
+# (There is no process.TrackTriggerStubs -- the sequence is TrackTriggerClustersStubs,
+# and process.L1TrackTrigger already contains it, so one path covers everything.)
+process.L1TrackTrigger_step = cms.Path(process.L1TrackTrigger)
 process.L1simulation_step = cms.Path(process.SimL1Emulator)
 process.endjob_step = cms.EndPath(process.endOfProcess)
 
@@ -193,8 +203,7 @@ process.ntuple_step = cms.Path(process.L1TrackHitNtupleMaker)
 
 # Updated schedule: Only keep Tracking, Simulation, and your Ntuple
 process.schedule = cms.Schedule(
-#    process.L1TrackTrigger_step, # Essential: Reconstructs the tracks
-#    process.StubRECO_step,       # Essential: Reconstructs the stubs
+    process.L1TrackTrigger_step, # FIRST: re-emulate stubs + L1 tracks in this job
     process.L1simulation_step,   # Essential: Provides the L1 objects
     process.ntuple_step,         # Your new L1TrackHitNtupleMaker path
     process.endjob_step          # Standard cleanup
