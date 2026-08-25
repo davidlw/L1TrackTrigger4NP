@@ -36,7 +36,28 @@ cmsDriver.py  --eventcontent FEVTDEBUGHLT --customise SLHCUpgradeSimulations/Con
 # cmsDriver.py  --eventcontent FEVTDEBUGHLT --customise SLHCUpgradeSimulations/Configuration/aging.customise_aging_1000,SimGeneral/MixingModule/customiseStoredTPConfig.higherPtTP,Configuration/DataProcessing/Utils.addMonitoring --datatier GEN-SIM-DIGI-RAW --conditions 140X_mcRun4_realistic_v4 --step DIGI:pdigi_valid,L1TrackTrigger,L1,DIGI2RAW,HLT:@relval2026 --geometry Extended2026D110 --era Phase2C17I13M9 --nThreads 4 --python_filename step2.py --fileout file:step2.root --filein file:step1.root --no_exec --mc  -n -1
 
 # RECO - step 3
-cmsDriver.py  --eventcontent MINIAODSIM --customise SLHCUpgradeSimulations/Configuration/aging.customise_aging_1000,Configuration/DataProcessing/Utils.addMonitoring --datatier GEN-SIM-DIGI-RAW-MINIAOD --inputCommands "keep *" --conditions 140X_mcRun4_realistic_v4 --customise_commands "process.MINIAODSIMoutput.outputCommands.append('keep *_*_*_HLT'); process.MINIAODSIMoutput.outputCommands.append('keep *_*_*_SIM');" --step RAW2DIGI,RECO,RECOSIM,PAT --geometry Extended2026D110 --era Phase2C17I13M9 --python_filename step3.py --fileout file:step3.root --filein file:step2.root --no_exec --mc -n -1
+#
+# The MINIAODSIM content below is extended so the offline-track <-> TrackingParticle
+# matching can be run later (see configurations/offlineTrackNtuple_cfg.py). That
+# matching is hit-based and needs, from this step:
+#     generalTracks + its trackExtras + rec hits   (the track's cluster refs)
+#     siPixelClusters, siPhase2Clusters            (for ClusterTPAssociation)
+# The TrackingParticles and DigiSimLinks it also needs are made at step 2 and are
+# already retained here by the blanket 'keep *_*_*_HLT'. So step3.root ends up
+# SELF-CONTAINED and the matching job needs no secondary input file -- verified by
+# running the full chain over a 100-event sample.
+#
+# Do not trim 'keep *_*_*_SIM' when reducing file size: tpClusterProducer reads
+# simTrackSrc = g4SimHits, which is a step-1 product, so the association breaks
+# silently without it.
+#
+# Note this output is not a miniAOD in any meaningful sense -- the two blanket
+# keeps already retain the step-2 digis and the sim hits, which dominate the size.
+# The five track/cluster keeps add comparatively little on top.
+#
+# NB geometry: Extended2026D110 is correct for CMSSW_14_0_6. In CMSSW_15_1_0_patch3
+# it no longer exists and cmsDriver fails -- the name there is ExtendedRun4D110.
+cmsDriver.py  --eventcontent MINIAODSIM --customise SLHCUpgradeSimulations/Configuration/aging.customise_aging_1000,Configuration/DataProcessing/Utils.addMonitoring --datatier GEN-SIM-DIGI-RAW-MINIAOD --inputCommands "keep *" --conditions 140X_mcRun4_realistic_v4 --customise_commands "process.MINIAODSIMoutput.outputCommands.append('keep *_*_*_HLT'); process.MINIAODSIMoutput.outputCommands.append('keep *_*_*_SIM'); process.MINIAODSIMoutput.outputCommands.append('keep recoTracks_generalTracks_*_*'); process.MINIAODSIMoutput.outputCommands.append('keep recoTrackExtras_generalTracks_*_*'); process.MINIAODSIMoutput.outputCommands.append('keep TrackingRecHitsOwned_generalTracks_*_*'); process.MINIAODSIMoutput.outputCommands.append('keep *_siPixelClusters_*_*'); process.MINIAODSIMoutput.outputCommands.append('keep *_siPhase2Clusters_*_*');" --step RAW2DIGI,RECO,RECOSIM,PAT --geometry Extended2026D110 --era Phase2C17I13M9 --python_filename step3.py --fileout file:step3.root --filein file:step2.root --no_exec --mc -n -1
 
 # L1 track trigger re-emulation
 cmsDriver.py -s L1TrackTrigger,L1,L1P2GT,NANO \
