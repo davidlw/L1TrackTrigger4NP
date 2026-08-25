@@ -10,7 +10,7 @@ paths only resolve from there.
 ## Quick start
 
 ```bash
-cd analyses/tracking_performance/output
+cd analyses/L1_tracking_performance/output
 
 root -l -b -q '../scripts/compare_eff.C(50)'                    # efficiency + duplicate rate
 root -l -b -q '../scripts/plot_eff.C("eff_qed_mumu.root")'
