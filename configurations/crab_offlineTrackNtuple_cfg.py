@@ -28,7 +28,14 @@ SAMPLE = 'QEDMuMu'
 
 # unitsPerJob is files-per-job. The UPC samples are small and quick; HYDJET PbPb
 # and EPOS pPb have far higher multiplicity, so the hit-based association costs
-# much more time and memory -- one file per job and a bigger memory request.
+# much more time and memory -- one file per job there.
+#
+# MEMORY CEILING: CRAB rejects any task asking for more than 3000 MB per core
+# ("above the allowed maximum of 3000 for a 1 core(s) job"). The heavy-ion samples
+# are therefore set to that maximum rather than to a guess above it. If their jobs
+# still die on memory, raise the ceiling by taking more cores -- set numCores = 2
+# here AND process.options.numberOfThreads = 2 in offlineTrackNtuple_cfg.py. CRAB
+# refuses the task if those two disagree.
 SAMPLES = {
     'QEDMuMu': dict(
         dataset='/StarLightQEDMuMuPhase2_PrivateMC/phys_heavyions-Step2_RECO-MINIAOD_CMSSW_14_0_6_v4-51f0e818e6fa09b9e74bf4ad8ded9703/USER',
@@ -41,10 +48,10 @@ SAMPLES = {
         unitsPerJob=5, memoryMB=2500),
     'HydjetPbPb': dict(
         dataset='/HydjetPbPbPhase2_PrivateMC/phys_heavyions-Step2_RECO-MINIAOD_CMSSW_14_0_6_v4-51f0e818e6fa09b9e74bf4ad8ded9703/USER',
-        unitsPerJob=1, memoryMB=8000),
+        unitsPerJob=1, memoryMB=3000),
     'EPOSpPb': dict(
         dataset='/EPOSpPbPhase2_PrivateMC/phys_heavyions-Step2_RECO-MINIAOD_CMSSW_14_0_6_v4-51f0e818e6fa09b9e74bf4ad8ded9703/USER',
-        unitsPerJob=1, memoryMB=6000),
+        unitsPerJob=1, memoryMB=3000),
 }
 S = SAMPLES[SAMPLE]
 
