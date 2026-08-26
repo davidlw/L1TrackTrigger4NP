@@ -72,10 +72,11 @@ const double kEtaAcc = 2.4;
 const int kNThr = 4;
 const double kThr[kNThr] = {0.3, 0.6, 1.0, 2.0};
 
-// Nch = truth charged particles with pT > 0.4, |eta| < 2.4, per event. Same
-// definition as ../../L1_tracking_performance/scripts/compare_effvsnch.C, so the
-// x axes are directly comparable. Note this counts TRUTH particles, not tracks,
-// so the multiplicity axis does not move when the reconstruction changes.
+// Nch = PRIMARY truth charged particles with pT > 0.4, |eta| < 2.4, per event.
+// Primary means tp_ngenpart > 0, i.e. from the event generator; GEANT secondaries
+// are excluded, so the multiplicity axis reflects the collision rather than the
+// detector material. Counting truth rather than tracks also means the axis does
+// not move when the reconstruction changes.
 const double kNchPtMin = 0.4;
 const int kNchBins = 40;
 
@@ -291,10 +292,11 @@ void RunOne(const char* path, bool muonsOnly, bool hpOnly, int tpClass,
     R.FlattenTP(tps);
     R.FlattenTrk(trks);
 
-    // Event multiplicity, from truth so it is independent of the reconstruction.
+    // Event multiplicity: PRIMARY truth particles only, independent of both the
+    // reconstruction and of GEANT secondary production.
     int nch = 0;
     for (const auto& t : tps)
-      if (t.pt > kNchPtMin && std::abs(t.eta) < kEtaAcc) ++nch;
+      if (t.cls() == 1 && t.pt > kNchPtMin && std::abs(t.eta) < kEtaAcc) ++nch;
 
     // Per-TP count of SELECTED matching tracks (see the header note on the join).
     std::map<float, std::vector<int>> byPt;   // pt first, to keep this near-linear

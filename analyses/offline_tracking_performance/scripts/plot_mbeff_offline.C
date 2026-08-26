@@ -70,7 +70,7 @@ void plot_mbeff_offline(const char* fname = "../output/mbeff.root",
   leg->SetBorderSize(0);
   leg->SetFillStyle(0);
   leg->SetTextSize(0.034);
-  if (gT) leg->AddEntry(gT, "truth (TrackingParticles)", "lp");
+  if (gT) leg->AddEntry(gT, "truth (primary particles)", "lp");
   if (gR) leg->AddEntry(gR, "offline reco (highPurity)", "lp");
   leg->Draw();
 

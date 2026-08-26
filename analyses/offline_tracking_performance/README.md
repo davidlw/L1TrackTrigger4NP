@@ -86,17 +86,37 @@ thresholds** (0.3 / 0.6 / 1 / 2 GeV).
 
 ## 4. Event trigger efficiency
 
-Fraction of events with at least one object above a pT threshold -- truth
-TrackingParticles against offline highPurity tracks, so the gap between the
-curves is what reconstruction costs relative to a perfect tracker.
+Fraction of events with at least one object above a pT threshold -- primary truth
+particles against offline highPurity tracks, so the gap between the curves is
+what reconstruction costs relative to a perfect tracker.
 
 ```
-root -l -b -q 'mbeff_offline.C("/eos/.../0000","../output/mbeff_hydjet.root",900)'
+# input, outname, nfiles, nchMax
+root -l -b -q 'mbeff_offline.C("/eos/.../0000","../output/mbeff_hydjet.root",900,6000)'
 root -l -b -q 'plot_mbeff_offline.C("../output/mbeff_hydjet.root","_hydjet","HYDJET PbPb")'
 ```
 
 The denominator is every event and is the same at every threshold, so events with
 nothing above it stay in the denominator. Writes `mbeff_vs_ptmin<tag>.pdf`.
+
+## 5. Trigger rate
+
+The same histograms, scaled by an assumed total collision rate:
+
+```
+root -l -b -q 'plot_rate_offline.C("../output/mbeff_hydjet.root","_hydjet","HYDJET PbPb",50e3)'
+root -l -b -q 'plot_rate_offline.C("../output/mbeff_epospb.root","_epospb","EPOS pPb",3e6)'
+```
+
+The last argument is the total rate in **Hz** and is an assumption you supply --
+the shape comes from the MC, the normalisation from you. Writes
+`rate_vs_ptmin<tag>.pdf` (require >= 1 track above a pT threshold) and
+`rate_vs_nchmin<tag>.pdf` (require Nch >= N), both with a log rate axis.
+
+Note the reco curve sits **below** truth on the Nch plot: reconstruction misses
+tracks, so measured multiplicity is systematically lower and a given threshold is
+harder to reach. Selecting the same events needs a lower cut on reconstructed
+multiplicity than on true multiplicity.
 
 ## Conventions
 
@@ -111,6 +131,13 @@ the step-2 mixing module (0.3 GeV in the current samples), not here.
 heavy-ion samples are GEANT secondaries, reconstructed at ~14% against ~84% for
 primaries, so the all-particle efficiency sits far below the primary one. Run
 `tpClass = 1` and `2` into separate files to see the two populations.
+
+**Every truth quantity is primaries-only**, regardless of `tpClass`: the Nch axis,
+the truth curve of the trigger efficiency, and the truth curve of the rate plots
+all require `tp_ngenpart > 0`. `tpClass` selects which particles the efficiency
+and duplicate rate are measured *for*; it does not change how Nch is counted.
+Multiplicity and the trigger ceiling should describe the collision, not how much
+material a secondary happened to traverse.
 
 With `tpClass = 1` a track matching only a secondary counts as **fake** -- the
 usual convention when the denominator is primaries. The primary fake rate is
