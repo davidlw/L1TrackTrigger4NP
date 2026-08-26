@@ -1,16 +1,16 @@
 # Offline tracking performance
 
 Efficiency, fake rate and duplicate rate for **offline** tracks (`generalTracks`)
-matched to TrackingParticles.
+matched to TrackingParticles, plus the event trigger efficiency.
 
-Offline reconstruction is a single algorithm, so there is nothing to compare
-against and every plot has one curve. The L1 equivalent lives in
-`../L1_tracking_performance/`, which compares Default vs Dummy stub.
+Offline reconstruction is a single algorithm, so nothing is compared against
+anything: within a panel the curves differ only by pT threshold. The L1
+equivalent is `../L1_tracking_performance/`, which compares Default vs Dummy stub.
 
 ```
-efficiency     = N(tp_nmatch > 0)   / N(tp)
-fake rate      = N(trk_isTrue == 0) / N(trk)
-duplicate rate = N(tp_nmatch > 1)   / N(tp_nmatch > 0)
+efficiency     = N(TP matched by >=1 selected track) / N(tp)
+fake rate      = N(track not matched to a TP)        / N(selected tracks)
+duplicate rate = N(TP matched by  >1 selected track) / N(matched TP)
 ```
 
 ## 1. Make the ntuple
@@ -35,67 +35,96 @@ No L1 re-emulation is involved, so this runs on step3 alone.
 
 ### On the grid
 
-For the published step3 datasets, use `configurations/crab_offlineTrackNtuple_cfg.py`:
-pick a sample at the top, then
-
-```
-crab submit -c crab_offlineTrackNtuple_cfg.py
-```
+For the published step3 datasets use `configurations/crab_offlineTrackNtuple_cfg.py`:
+pick a sample at the top, then `crab submit -c crab_offlineTrackNtuple_cfg.py`.
 
 Submit from **CMSSW_15_1_0_patch3**, where the plugin is built -- CRAB ships the
 local release area with the job, so the plugin must exist where you submit from.
-The samples were produced in CMSSW_14_0_6; reading them from 15_1_0_patch3 is
-what was tested.
 
 ## 2. Fill the histograms
 
 Run from `scripts/`. **Give the path to your own ntuple** -- the defaults are
-only placeholders.
+placeholders.
 
 ```
 cd scripts
 root -l -b -q 'offline_perf.C("../output/OfflineTrackNtuple.root")'
 ```
 
-One file is the common case. For many files, pass the **directory** plus how many
-to read and the filename pattern:
+For many files pass the **directory**, how many to read, and the rest:
 
 ```
-root -l -b -q 'offline_perf.C("/path/to/dir","../output/offperf.root",50)'
-root -l -b -q 'offline_perf.C("/path/to/dir","../output/offperf.root",50,false,"myntuple_%d.root")'
+# input, outname, nfiles, muonsOnly, hpOnly, nchMax, tpClass, pattern
+root -l -b -q 'offline_perf.C("/eos/.../0000","../output/offperf_hydjet_hp.root",900,false,true,8000,1)'
 ```
 
-Arguments: `input`, `outname`, `nfiles` (0 = `input` is a single file),
-`muonsOnly` (keep only `|pdgid| == 13`), `pattern`.
+| argument | meaning |
+|---|---|
+| `nfiles` | 0 means `input` is a single file; otherwise it is a directory |
+| `muonsOnly` | keep only `\|pdgid\| == 13` |
+| `hpOnly` | keep only highPurity tracks |
+| `nchMax` | upper edge of the Nch axis -- **sample dependent**, see below |
+| `tpClass` | 0 all, 1 primary (`tp_ngenpart > 0`), 2 GEANT secondary |
+| `pattern` | filename pattern, default `OfflineTrackNtuple_%d.root` |
 
-Integrated rates are printed to the terminal; the binned histograms go to
-`outname`.
+`nchMax` measured on the current samples: QED µµ **4**, EPOS pPb **250**,
+HYDJET PbPb **8000**. Entries above it go to overflow and vanish from the plot,
+so set it generously. Below 40 the macro gives one bin per unit.
 
 ## 3. Plot
 
 ```
-root -l -b -q 'plot_offline_perf.C("../output/offperf_qed_mumu.root")'
+root -l -b -q 'plot_offline_perf.C("../output/offperf_hydjet_hp.root","_hydjet_hp","HYDJET PbPb, offline highPurity")'
 ```
 
-Writes PDF + PNG to `../figures/` and dumps the binned numbers as text. Optional
-2nd/3rd arguments are a filename tag and the sample label drawn on each plot:
+Arguments are the histogram file, a filename tag, and the label drawn on each
+plot. Writes PDF + PNG to `../figures/` and dumps binned numbers as text.
+
+Panels: `off_{eff,fake,dup}_vs_{pt,eta,phi,nch}`. The pT panels use a **log x
+axis** from 0.3 to 10 GeV; the eta, phi and Nch panels **overlay four pT
+thresholds** (0.3 / 0.6 / 1 / 2 GeV).
+
+## 4. Event trigger efficiency
+
+Fraction of events with at least one object above a pT threshold -- truth
+TrackingParticles against offline highPurity tracks, so the gap between the
+curves is what reconstruction costs relative to a perfect tracker.
 
 ```
-root -l -b -q 'plot_offline_perf.C("../output/offperf_hydjet.root","_hydjet","HYDJET PbPb, offline tracks")'
+root -l -b -q 'mbeff_offline.C("/eos/.../0000","../output/mbeff_hydjet.root",900)'
+root -l -b -q 'plot_mbeff_offline.C("../output/mbeff_hydjet.root","_hydjet","HYDJET PbPb")'
 ```
 
-Panels: `off_{eff,fake,dup}_vs_{pt,eta,phi}` plus `_vs_z0` for efficiency and fake
-rate, and `_pt1` variants of the eta/phi panels.
+The denominator is every event and is the same at every threshold, so events with
+nothing above it stay in the denominator. Writes `mbeff_vs_ptmin<tag>.pdf`.
 
 ## Conventions
 
-Binning, the |eta| < 2.4 acceptance and the pT > 1 / pT > 2 variants are identical
-to the L1 macros, so an offline panel overlays the corresponding L1 one without
-rescaling. The y axis is 0-1.35 for all three quantities, again as in the L1 plots.
+Everything is inside **|eta| < 2.4**, the pT spectra included.
 
 The efficiency denominator carries **no hit or stub requirement** -- the TP
 selection in the ntuplizer is deliberately loose, so efficiency is not biased by
 the reconstruction it measures. The low-pT reach is set upstream by `ptMinTP` in
-the step-2 mixing module, not here.
+the step-2 mixing module (0.3 GeV in the current samples), not here.
+
+**Primaries vs secondaries matters.** About a quarter of the stored TPs in the
+heavy-ion samples are GEANT secondaries, reconstructed at ~14% against ~84% for
+primaries, so the all-particle efficiency sits far below the primary one. Run
+`tpClass = 1` and `2` into separate files to see the two populations.
+
+With `tpClass = 1` a track matching only a secondary counts as **fake** -- the
+usual convention when the denominator is primaries. The primary fake rate is
+therefore higher than the inclusive one, and the difference is the secondary
+contamination. In the `tpClass = 2` output the fake-rate panels are meaningless
+by construction (a track is "fake" unless it matches a secondary, and most match
+primaries); only efficiency and duplicate rate mean anything there.
+
+Because `matchtrk_*` has no highPurity field, `tp_nmatch` cannot be used once a
+track selection is applied -- it counts every match regardless of quality. The
+macro instead rebuilds the per-TP count by joining tracks to TPs on their truth
+values, which are identical floats on both sides. Validated against `tp_nmatch`
+with no selection: identical over 31301 TPs, duplicates included.
+
+The y axis is 0-1.35 for all three quantities, as in the L1 plots.
 
 `output/` and `figures/` are gitignored.
