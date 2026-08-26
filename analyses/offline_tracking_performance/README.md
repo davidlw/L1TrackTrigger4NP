@@ -33,6 +33,20 @@ If the keeps are missing the job still exits 0 and every `trk_*` branch is empty
 
 No L1 re-emulation is involved, so this runs on step3 alone.
 
+### On the grid
+
+For the published step3 datasets, use `configurations/crab_offlineTrackNtuple_cfg.py`:
+pick a sample at the top, then
+
+```
+crab submit -c crab_offlineTrackNtuple_cfg.py
+```
+
+Submit from **CMSSW_15_1_0_patch3**, where the plugin is built -- CRAB ships the
+local release area with the job, so the plugin must exist where you submit from.
+The samples were produced in CMSSW_14_0_6; reading them from 15_1_0_patch3 is
+what was tested.
+
 ## 2. Fill the histograms
 
 Run from `scripts/`. **Give the path to your own ntuple** -- the defaults are
