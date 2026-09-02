@@ -33,6 +33,53 @@ TGraphAsymmErrors* MakeEff(TFile* f, const char* num, const char* den, int color
   return g;
 }
 
+// ---------------------------------------------------------------------------
+// Optional offline reference curve.
+//
+// The offline macros (../../offline_tracking_performance) write the same three
+// quantities with the SAME eta and phi binning, so those overlay bin-for-bin.
+// The pT binning differs (offline starts at 0.3 with finer low-pT bins), which is
+// why the reference is drawn with "HIST" -- its own bin edges stay visible rather
+// than being interpolated onto the L1 ones.
+//
+// The threshold indices differ too: offline fills four thresholds 0.3/0.6/1/2 as
+// eta0..eta3, so the L1 pT > 1 panel pairs with offline eta2 and pT > 2 with eta3.
+// Offline has no pT > 2 z0 histogram, so the z0 panel gets no reference.
+//
+// CAVEAT: this is a reference, not a bound on the same denominator. The offline
+// numbers come from a different production with ptMinTP = 0.3 and no stub
+// preselection on the TPs, whereas the L1 samples were made with ptMinTP = 1.0
+// and their ntuple applies TP_minNStub >= 3. Read it as "what offline achieves on
+// this kind of event", not as a strict ceiling for these particular TPs.
+// ---------------------------------------------------------------------------
+TFile* gOff = nullptr;
+
+const char* OffVar(const char* var) {
+  if (!strcmp(var, "pt")) return "pt";
+  if (!strcmp(var, "eta1")) return "eta2";   // L1 pT > 1  <-> offline threshold 2
+  if (!strcmp(var, "eta2")) return "eta3";   // L1 pT > 2  <-> offline threshold 3
+  if (!strcmp(var, "phi1")) return "phi2";
+  if (!strcmp(var, "phi2")) return "phi3";
+  return nullptr;                            // z0: no matching offline selection
+}
+
+TH1D* OffCurve(const char* var, const char* numPfx, const char* denPfx) {
+  if (!gOff) return nullptr;
+  const char* ov = OffVar(var);
+  if (!ov) return nullptr;
+  TH1D* hn = (TH1D*)gOff->Get(Form("%s_%s_off", numPfx, ov));
+  TH1D* hd = (TH1D*)gOff->Get(Form("%s_%s_off", denPfx, ov));
+  if (!hn || !hd) return nullptr;
+  auto* r = (TH1D*)hn->Clone(Form("offref_%s_%s_%s", numPfx, ov, var));
+  r->Divide(hn, hd, 1., 1., "B");
+  r->SetDirectory(nullptr);
+  r->SetLineColor(kBlack);
+  r->SetLineStyle(2);
+  r->SetLineWidth(3);
+  r->SetMarkerStyle(0);
+  return r;
+}
+
 // numPfx/denPfx select the quantity: ("num","den") = efficiency,
 // ("numD","denM") = duplicate rate. Axis and styling are identical either way.
 void DrawPanelGen(TFile* f, const char* var, const char* xtitle, const char* title,
@@ -61,15 +108,23 @@ void DrawPanelGen(TFile* f, const char* var, const char* xtitle, const char* tit
                        kBlue + 1, 20);
   auto* gDum = MakeEff(f, Form("%s_%s_dum", numPfx, var), Form("%s_%s_dum", denPfx, var),
                        kRed + 1, 21);
+  // reference first, so the L1 markers sit on top of it
+  TH1D* hOff = OffCurve(var, numPfx, denPfx);
+  if (hOff) hOff->Draw("HIST SAME");
   if (gDef) gDef->Draw("P same");
   if (gDum) gDum->Draw("P same");
 
-  auto* leg = new TLegend(0.17, 0.74, 0.48, 0.87);
+  // With the reference there are three entries. Put the box in the upper RIGHT,
+  // above y = 1: nothing can exceed 1, so that strip is empty in every panel,
+  // whereas the mid-left band is now occupied by the low-pT turn-on.
+  auto* leg = hOff ? new TLegend(0.52, 0.75, 0.92, 0.90)
+                   : new TLegend(0.17, 0.74, 0.48, 0.87);
   leg->SetBorderSize(0);
   leg->SetFillStyle(0);
   leg->SetTextSize(0.036);
   if (gDef) leg->AddEntry(gDef, "Default Stub", "lp");
   if (gDum) leg->AddEntry(gDum, "Dummy Stub", "lp");
+  if (hOff) leg->AddEntry(hOff, "Offline (reference)", "l");
   leg->Draw();
 
   TLatex tx;
@@ -158,9 +213,22 @@ void FoldScan(TFile* f, const char* smp, const char* label) {
 
 void plot_eff(const char* fname = "eff_qed_mumu.root",
               const char* tag = "",
-              const char* sample = "STARlight QED #mu#mu") {
+              const char* sample = "STARlight QED #mu#mu",
+              const char* offlineFile = "") {
   gROOT->SetBatch(true);
   gStyle->SetOptStat(0);
+
+  // Optional: overlay the offline curve as a reference. Read the caveat above the
+  // OffCurve helper before using it -- it is a different production.
+  if (strlen(offlineFile)) {
+    gOff = TFile::Open(offlineFile);
+    if (!gOff || gOff->IsZombie()) {
+      printf("[warn] cannot open offline reference %s -- continuing without it\n", offlineFile);
+      gOff = nullptr;
+    } else {
+      printf("[info] overlaying offline reference from %s\n", offlineFile);
+    }
+  }
 
   TFile* f = TFile::Open(fname);
   if (!f || f->IsZombie()) {
