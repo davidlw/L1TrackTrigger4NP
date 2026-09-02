@@ -69,11 +69,24 @@ largest count seen, and `plot_stubs.C` takes an optional `xmax` to override.
 Measured, EPOS pPb / HYDJET PbPb: dummy produces **8.9x / 7.3x** more accepted
 stubs than default (1408 vs 158 per event, and 39874 vs 5454).
 
-**Dummy has zero rejected stubs, and that is correct.** Dummy stubs are one per
-inner-sensor cluster -- verified as `dummy stubs / default sensor-0 clusters =
-1.0000` over 25000 events. Nothing is paired and no bend window is applied, so
-there is no selection a stub could fail. The same fact explains the yield ratio
-and the 999999 `trigBend` sentinel.
+### Which production is which
+
+A dummy production always has `allstub_trigBend` at the 999999 sentinel. What
+varies between productions is whether it rejects anything at all:
+
+| sample | dummy | rejected/evt |
+|---|---|---|
+| EPOS pPb | `260825_213152` | 0 |
+| EPOS pPb | `260828_193234` | 9.5 (0.68%) |
+| HYDJET PbPb | `260825_213428` | 0 |
+| HYDJET PbPb | `260828_193408` | 1020 (2.6%) |
+
+**An empty rejected curve means that production applied no stub selection**, not
+that dummy stubs cannot be rejected. In the `260825` EPOS dummy every inner-sensor
+cluster became exactly one stub (`dummy stubs / default sensor-0 clusters =
+1.0000` over 25000 events), so nothing was paired and no window was applied and
+no selection existed to fail. The `260828` productions do apply one. Prefer the
+newer ones unless you specifically want the no-selection variant.
 
 ## Offline reference on the efficiency plots
 

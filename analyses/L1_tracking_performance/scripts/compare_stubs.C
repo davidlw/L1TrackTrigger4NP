@@ -8,7 +8,20 @@
 // Both live in the same allstub_* collection and are separated by the flag
 // allstub_isRejected (0 = accepted, non-zero = rejected).
 //
-// WHY DUMMY HAS ZERO REJECTED STUBS -- this looks wrong and is not.
+// PRODUCTIONS DIFFER IN WHETHER DUMMY REJECTS ANYTHING -- check before reading a
+// zero. Fingerprinted over nalewis's EOS area (a dummy production always has
+// allstub_trigBend at the 999999 sentinel; the rejected fraction is what varies):
+//
+//   EPOS   dummy 260825_213152  rej 0.0000     dummy 260828_193234  rej 0.0062
+//   HYDJET dummy 260825_213428  rej 0.0000     dummy 260828_193408  rej 0.0265
+//   pp     dummy 260720_222437  rej 0.0335
+//   QEDee  dummy 260825_212958  rej 0.0000     dummy 260825_163451  rej 0.0060
+//
+// So an empty rejected curve means "this production applied no stub selection",
+// not "dummy stubs cannot be rejected". Prefer the newer productions unless you
+// specifically want the no-selection variant.
+//
+// WHY THE 260825 DUMMY PRODUCTIONS HAVE ZERO REJECTED -- measured, not assumed.
 //
 // Measured on EPOS pPb, 25000 events, the same events in both productions:
 //
@@ -16,12 +29,13 @@
 //             clusters 1408.0/evt on sensor 0, 1368.4/evt on sensor 1
 //   dummy   : 1408.0 accepted + ZERO rejected stubs/evt
 //
-// dummy stubs / default sensor-0 clusters = 1.0000. Every inner-sensor cluster
-// becomes exactly one dummy stub. The dummy builder never pairs anything: it
-// requires no outer cluster and applies no bend window, so there is no selection
-// step that a stub could fail. Zero rejected is therefore structural, not a
-// missing collection or a broken branch -- allstub_isRejected is present, its
-// length always matches allstub_x, and it is 0 for all 7.1M stubs in a file.
+// dummy stubs / default sensor-0 clusters = 1.0000. In THAT production every
+// inner-sensor cluster became exactly one dummy stub: nothing was paired and no
+// window was applied, so no selection existed for a stub to fail. The zero is
+// real, not a missing collection or a broken branch -- allstub_isRejected is
+// present, its length always matches allstub_x, and it is 0 for all 7.1M stubs.
+// The 260828 productions of the same samples do reject stubs, so this is a
+// statement about that production and not about dummy stubs in general.
 //
 // The same fact explains the other two signatures: the ~8.9x larger accepted
 // yield (default needs a matched pair passing the window) and allstub_trigBend
@@ -54,6 +68,7 @@
 // ---------------------------------------------------------------------------
 
 #include <vector>
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 
@@ -131,11 +146,32 @@ struct Reader {
   }
 };
 
+// List the .root files in a directory rather than assuming they are numbered
+// 1..N. CRAB job numbers are not contiguous -- a partial production can hold a
+// single file called ..._27.root, which a numbered loop silently skips, leaving
+// an empty sample and no error.
+std::vector<TString> ListRootFiles(const char* dir, int nfiles) {
+  std::vector<TString> out, names;
+  TSystemDirectory d("d", dir);
+  TList* fl = d.GetListOfFiles();
+  if (!fl) { printf("[warn] cannot list %s\n", dir); return out; }
+  TIter next(fl);
+  while (auto* o = (TSystemFile*)next()) {
+    TString n = o->GetName();
+    if (!o->IsDirectory() && n.EndsWith(".root")) names.push_back(n);
+  }
+  std::sort(names.begin(), names.end());
+  for (auto& n : names) {
+    if (nfiles > 0 && (int)out.size() >= nfiles) break;
+    out.push_back(TString(dir) + "/" + n);
+  }
+  if (out.empty()) printf("[warn] no .root files in %s\n", dir);
+  return out;
+}
+
 void Run(const char* dir, int nfiles, Hists& acc, Hists& rej, long& nstubAcc,
          long& nstubRej, long& nZeroRej) {
-  for (int i = 1; i <= nfiles; ++i) {
-    TString path = TString(dir) + Form("/L1TrackHitNtuple_UPC_v4_%d.root", i);
-    if (gSystem->AccessPathName(path)) continue;
+  for (const auto& path : ListRootFiles(dir, nfiles)) {
     Reader R;
     if (!R.Open(path)) { R.Close(); continue; }
     for (Long64_t e = 0; e < R.tree->GetEntries(); ++e) {
@@ -159,7 +195,7 @@ void Run(const char* dir, int nfiles, Hists& acc, Hists& rej, long& nstubAcc,
       if (nr == 0) ++nZeroRej;
     }
     R.Close();
-    printf("[info] %s file %d done\n", dir, i);
+    printf("[info] %s done\n", path.Data());
     fflush(stdout);
   }
 }
