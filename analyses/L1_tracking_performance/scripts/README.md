@@ -63,8 +63,15 @@ root -l -b -q 'plot_stubs.C("../output/stub_epos.root","_epos","EPOS pPb","epos"
 
 Panels: stubs per event (the main one, log-log, four curves), plus r, z,
 layer/disk and trigBend. The multiplicity is stored at one bin per stub, so the
-plot step can pick any binning or upper limit; it defaults to 25% above the
-largest count seen, and `plot_stubs.C` takes an optional `xmax` to override.
+plot step can pick any binning or upper limit.
+
+`plot_stubs.C(file, tag, label, pfx, xmax, binsPerDecade, minWidth)` -- `xmax` 0
+takes 25% above the largest count seen; `binsPerDecade` (12) and `minWidth` (1)
+control the multiplicity binning, which is geometric with a floor on the width.
+**Raise `minWidth` when the low-N end looks spiky.** In the heavy-ion samples
+almost every event carries thousands of stubs, so that region holds only a
+handful of events and width-1 bins there show single counts. HYDJET reads well
+at `minWidth = 4`. Redrawing is instant, so tune it.
 
 Measured, EPOS pPb / HYDJET PbPb: dummy produces **8.9x / 7.3x** more accepted
 stubs than default (1408 vs 158 per event, and 39874 vs 5454).

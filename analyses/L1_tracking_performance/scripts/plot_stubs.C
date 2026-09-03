@@ -18,8 +18,12 @@
 //   root -l -b -q 'plot_stubs.C("../output/stub_epos.root","_epos","EPOS pPb","epos")'
 //   root -l -b -q 'plot_stubs.C("../output/stub_hydjet.root","_hydjet","HYDJET PbPb","hydjet",3e5)'
 //
-//   xmax  optional override of the multiplicity axis; 0 = 25% above the largest
-//         count seen, which is what keeps the dummy tail inside the frame
+//   xmax          override of the multiplicity axis; 0 = 25% above the largest
+//                 count seen, which keeps the dummy tail inside the frame
+//   binsPerDecade multiplicity binning; lower is coarser and smoother
+//   minWidth      floor on the bin width, in stubs. Raise it when the low-N end
+//                 looks spiky -- in the heavy-ion samples that region holds only
+//                 a handful of events, so width-1 bins there show single counts
 // ---------------------------------------------------------------------------
 
 #include <vector>
@@ -126,7 +130,8 @@ TH1D* Get(TFile* f, const char* n) {
 }  // namespace
 
 void plot_stubs(const char* fname = "../output/stub_epos.root", const char* tag = "_epos",
-                const char* label = "EPOS pPb", const char* pfx = "epos", double xmax = 0) {
+                const char* label = "EPOS pPb", const char* pfx = "epos", double xmax = 0,
+                double binsPerDecade = 12, double minWidth = 1) {
   gROOT->SetBatch(true);
   gStyle->SetOptStat(0);
 
@@ -152,11 +157,27 @@ void plot_stubs(const char* fname = "../output/stub_epos.root", const char* tag 
   const double hi = xmax > 0 ? xmax : std::max(60.0, nmax * 1.25);
   printf("largest stub count = %d  ->  multiplicity axis to %.0f\n", nmax, hi);
 
+  // Geometric bins with a floor on the width. Below the point where a geometric
+  // bin would be narrower than minWidth the bins are minWidth wide, above it they
+  // grow geometrically -- so there is no abrupt handover like the old fixed
+  // integer-bins-to-30 rule, which left a visible seam.
+  //
+  // Widen minWidth (or lower binsPerDecade) when the low-N region looks spiky:
+  // that region is sparsely populated in the heavy-ion samples, where almost
+  // every event carries thousands of stubs, so fine bins there hold single
+  // events. Both are arguments, and redrawing costs nothing.
   std::vector<double> me;
-  for (int i = 0; i <= 30; ++i) me.push_back(i + 0.5);
-  const double lo = 30.5;
-  const int ng = std::max(45, (int)std::lround(25.0 * std::log10(hi / lo)));
-  for (int i = 1; i <= ng; ++i) me.push_back(lo * std::pow(hi / lo, (double)i / ng));
+  {
+    const double r = std::pow(10.0, 1.0 / binsPerDecade);
+    double e = 0.5;
+    me.push_back(e);
+    while (e < hi && me.size() < 4000) {
+      e += std::max(minWidth, e * (r - 1.0));
+      me.push_back(e);
+    }
+  }
+  printf("multiplicity: %d bins, %.0f per decade, minimum width %.1f\n",
+         (int)me.size() - 1, binsPerDecade, minWidth);
 
   Draw4(Rebin(fDA, "mDA", me), Rebin(fDR, "mDR", me),
         Rebin(fUA, "mUA", me), Rebin(fUR, "mUR", me),
