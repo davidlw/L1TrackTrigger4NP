@@ -24,6 +24,14 @@
 //   minWidth      floor on the bin width, in stubs. Raise it when the low-N end
 //                 looks spiky -- in the heavy-ion samples that region holds only
 //                 a handful of events, so width-1 bins there show single counts
+//   logx          log x axis (default) or linear. Linear switches the binning to
+//                 uniform, and is the better view of where the bulk of the
+//                 distribution sits; the log view is the better one for the
+//                 low-N tail and the rejected curves, which sit near zero.
+//
+// NOTE for the linear view: N = 0 was folded into the first bin when filling (it
+// cannot sit on a log axis), so the bin at the origin holds events with 0 OR 1
+// stub. The exact zero fractions are the ones printed in the legend.
 // ---------------------------------------------------------------------------
 
 #include <vector>
@@ -131,7 +139,7 @@ TH1D* Get(TFile* f, const char* n) {
 
 void plot_stubs(const char* fname = "../output/stub_epos.root", const char* tag = "_epos",
                 const char* label = "EPOS pPb", const char* pfx = "epos", double xmax = 0,
-                double binsPerDecade = 12, double minWidth = 1) {
+                double binsPerDecade = 12, double minWidth = 1, bool logx = true) {
   gROOT->SetBatch(true);
   gStyle->SetOptStat(0);
 
@@ -166,8 +174,10 @@ void plot_stubs(const char* fname = "../output/stub_epos.root", const char* tag 
   // that region is sparsely populated in the heavy-ion samples, where almost
   // every event carries thousands of stubs, so fine bins there hold single
   // events. Both are arguments, and redrawing costs nothing.
+  // Geometric bins suit a log axis; on a linear one they would put almost every
+  // bin in the first few percent of the range, so use uniform bins there instead.
   std::vector<double> me;
-  {
+  if (logx) {
     const double r = std::pow(10.0, 1.0 / binsPerDecade);
     double e = 0.5;
     me.push_back(e);
@@ -175,15 +185,19 @@ void plot_stubs(const char* fname = "../output/stub_epos.root", const char* tag 
       e += std::max(minWidth, e * (r - 1.0));
       me.push_back(e);
     }
+    printf("multiplicity: %d log bins, %.0f per decade, min width %.1f\n",
+           (int)me.size() - 1, binsPerDecade, minWidth);
+  } else {
+    const double w = std::max(minWidth, hi / 150.0);
+    for (double e = 0.5; e < hi + w; e += w) me.push_back(e);
+    printf("multiplicity: %d linear bins of width %.0f\n", (int)me.size() - 1, w);
   }
-  printf("multiplicity: %d bins, %.0f per decade, minimum width %.1f\n",
-         (int)me.size() - 1, binsPerDecade, minWidth);
 
   Draw4(Rebin(fDA, "mDA", me), Rebin(fDR, "mDR", me),
         Rebin(fUA, "mUA", me), Rebin(fUR, "mUR", me),
         Form("Stubs per event, %s", label),
         Form("../figures/%s_nstub%s.pdf", pfx, tag),
-        "Stubs per event", "Events / stub", true,
+        "Stubs per event", "Events / stub", logx,
         Form("#LTN#GT = %.1f/evt", nevD ? naD / nevD : 0),
         Form("#LTN#GT = %.1f/evt, %.1f%% rej.", nevD ? nrD / nevD : 0,
              (naD + nrD) ? 100 * nrD / (naD + nrD) : 0),
