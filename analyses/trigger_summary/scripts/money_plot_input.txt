@@ -1,0 +1,41 @@
+# Event trigger efficiency summary -- one row per physics signal.
+#
+# Columns (whitespace separated):
+#   label      x-axis label; '_' -> space, TLatex allowed (#gamma, ^{+}, ...)
+#   Nfid       events in the FIDUCIAL truth definition (the denominator):
+#              >= k PRIMARY charged particles with pT > 0.4 and |eta| < 2.4
+#              (for exclusive signals: all daughters satisfy this)
+#   Ndefault   of those, events with >= k default-L1 tracks with pT > 2 GeV
+#              (the default tracking only exists above ~2 GeV)
+#   NlowpT     of those, events with >= k low-pT-L1 tracks with pT > 0.4 GeV
+#   Noffline   of those, events with >= k offline highPurity tracks, pT > 0.4
+#
+# The denominator is common; the numerator threshold is each trigger's own.
+#
+# A line "--- title" starts a group: heavier divider + title above the group.
+#
+# The default-L1 column therefore folds the acceptance loss of its 2 GeV
+# threshold together with its tracking inefficiency -- deliberately.
+#
+# ------------------------------------------------------------------------
+# TEMPLATE: every number below is a PLACEHOLDER to demonstrate the layout.
+# Replace with real counts and delete this line (the macro prints a
+# watermark while it is present).
+# ------------------------------------------------------------------------
+#
+# label                                Nfid    Ndefault  NlowpT   Noffline
+--- UPC_#gamma#gamma
+#gamma#gamma#rightarrowe^{+}e^{-}               20000   2600      14900    16800
+#gamma#gamma#rightarrow#mu^{+}#mu^{-}           20000   3100      15800    17400
+#gamma#gamma#rightarrow#tau^{+}#tau^{-}         20000   4200      14900    16900
+#gamma#gamma#rightarrowh^{+}h^{-}               20000   2400      14200    16300
+#gamma#gamma#rightarrow#Lambda#bar{#Lambda}     20000   150       600      14100
+--- UPC_#gammaA
+#rho^{0}#rightarrow#pi#pi                       20000   2000      13900    16200
+J/#psi#rightarrow#mu#mu                         20000   6500      16600    17800
+#psi(2S)#rightarrowJ/#psi#pi#pi                 20000   900       12800    16000
+inclusive_D^{0}                                 20000   4800      14600    16900
+#gammaA_dijet                                   20000   19200     19800    19900
+--- hadronic_MB
+pPb_MB                                          20000   13300     19400    19950
+PbPb_MB                                         20000   17400     19900    20000
