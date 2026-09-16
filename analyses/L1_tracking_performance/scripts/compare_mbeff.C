@@ -30,11 +30,13 @@
 #include <vector>
 #include <cmath>
 #include <cstdio>
+#include "../../common/InputFiles.h"
 
 namespace {
 
-const char* kDirDefault = "/Users/wl33/Documents/DefaultStub/HYDJet_PbPb";
-const char* kDirDummy = "/Users/wl33/Documents/DummyStub/HYDJet_PbPb";
+// Set on the command line (arguments 2 and 3); a directory of *.root or one file.
+const char* kDirDefault = "";
+const char* kDirDummy = "";
 const char* kSample = "HYDJet PbPb";
 const char* kTreePath = "L1TrackHitNtupleMaker/eventTree";
 
@@ -76,9 +78,7 @@ struct Scan {
 
 // which = 0 -> tracking particles (tp_*), 1 -> reconstructed tracks (trk_*)
 void Fill(const char* dir, int nfiles, int which, Scan& s) {
-  for (int i = 1; i <= nfiles; ++i) {
-    TString path = Form("%s/L1TrackHitNtuple_UPC_v4_%d.root", dir, i);
-    if (gSystem->AccessPathName(path)) continue;
+  for (const auto& path : ListRootFiles(dir, nfiles)) {
     TFile* f = TFile::Open(path);
     if (!f || f->IsZombie()) continue;
     TTree* t = (TTree*)f->Get(kTreePath);
@@ -155,6 +155,10 @@ void compare_mbeff(int nfiles = 100, const char* dirDef = "", const char* dirDum
                    const char* sample = "", const char* tag = "hydjet") {
   if (strlen(dirDef)) kDirDefault = dirDef;
   if (strlen(dirDum)) kDirDummy = dirDum;
+  if (!strlen(kDirDefault) || !strlen(kDirDummy)) {
+    printf("give the Default-stub and Dummy-stub ntuple locations (a directory of *.root, or one file)\n");
+    return;
+  }
   if (strlen(sample)) kSample = sample;
   gROOT->SetBatch(true);
   gStyle->SetOptStat(0);

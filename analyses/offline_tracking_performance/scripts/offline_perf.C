@@ -61,6 +61,7 @@
 #include <map>
 #include <cmath>
 #include <cstdio>
+#include "../../common/InputFiles.h"
 
 namespace {
 
@@ -366,8 +367,7 @@ void PrintRate(const char* label, double num, double den) {
 void offline_perf(const char* input = "../output/OfflineTrackNtuple.root",
                   const char* outname = "../output/offperf_qed_mumu.root",
                   int nfiles = 0, bool muonsOnly = false, bool hpOnly = false,
-                  double nchMax = 200, int tpClass = 0,
-                  const char* pattern = "OfflineTrackNtuple_%d.root") {
+                  double nchMax = 200, int tpClass = 0) {
   gROOT->SetBatch(true);
 
   // Fine below 1 GeV, where the turn-on is; drawn on a log x axis.
@@ -379,15 +379,9 @@ void offline_perf(const char* input = "../output/OfflineTrackNtuple.root",
   h.Book("off", npt, ptbins, nchMax);
   Totals tot;
 
-  if (nfiles <= 0) {
-    RunOne(input, muonsOnly, hpOnly, tpClass, h, tot);   // input is one file
-  } else {
-    for (int i = 1; i <= nfiles; ++i) {          // input is a directory
-      TString path = TString(input) + "/" + Form(pattern, i);
-      if (gSystem->AccessPathName(path)) continue;
-      RunOne(path, muonsOnly, hpOnly, tpClass, h, tot);
-    }
-  }
+  // one file, or a directory of *.root (first nfiles of them; 0 = all)
+  for (const auto& path : ListRootFiles(input, nfiles))
+    RunOne(path, muonsOnly, hpOnly, tpClass, h, tot);
 
   printf("\n============== offline tracking performance ==============\n");
   printf("efficiency     = N(TP matched by >=1 selected track) / N(tp)\n");

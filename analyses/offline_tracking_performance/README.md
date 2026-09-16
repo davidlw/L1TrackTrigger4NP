@@ -51,21 +51,21 @@ cd scripts
 root -l -b -q 'offline_perf.C("../output/OfflineTrackNtuple.root")'
 ```
 
-For many files pass the **directory**, how many to read, and the rest:
+For many files pass the **directory** -- every `*.root` in it is read, whatever
+the names -- how many to read, and the rest:
 
 ```
-# input, outname, nfiles, muonsOnly, hpOnly, nchMax, tpClass, pattern
+# input, outname, nfiles, muonsOnly, hpOnly, nchMax, tpClass
 root -l -b -q 'offline_perf.C("/eos/.../0000","../output/offperf_hydjet_hp.root",900,false,true,8000,1)'
 ```
 
 | argument | meaning |
 |---|---|
-| `nfiles` | 0 means `input` is a single file; otherwise it is a directory |
+| `nfiles` | how many files of a directory to read, 0 = all; ignored for a single file |
 | `muonsOnly` | keep only `\|pdgid\| == 13` |
 | `hpOnly` | keep only highPurity tracks |
 | `nchMax` | upper edge of the Nch axis -- **sample dependent**, see below |
 | `tpClass` | 0 all, 1 primary (`tp_ngenpart > 0`), 2 GEANT secondary |
-| `pattern` | filename pattern, default `OfflineTrackNtuple_%d.root` |
 
 `nchMax` measured on the current samples: QED µµ **4**, EPOS pPb **250**,
 HYDJET PbPb **8000**. Entries above it go to overflow and vanish from the plot,

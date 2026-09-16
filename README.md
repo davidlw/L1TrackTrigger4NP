@@ -4,6 +4,35 @@ cd /yourepath/ # usually a CMSSW src directory
 
 git clone https://github.com/davidlw/L1TrackTrigger4NP
 
+## Getting started without lxplus (analysis only)
+
+The macros under `analyses/` are plain ROOT and do not need CMSSW or lxplus.
+Only ntuple *production* (the `cmsRun` steps below) does. To compute efficiency,
+fake rate, duplicate rate or the trigger efficiency on a laptop:
+
+1. Install ROOT (`brew install root`, or `conda install -c conda-forge root`).
+2. `git clone https://github.com/davidlw/L1TrackTrigger4NP`
+3. Get a few ntuple files from someone with EOS access -- one L1 file
+   (`L1TrackHitNtuple_*.root`) is ~12 MB, so ten of them per sample is plenty
+   for a first look. Put them in any directory; the file names do not matter.
+4. Run a fill macro on that directory (or on one file), then the matching
+   `plot_*` macro on its output:
+
+```bash
+cd analyses/offline_tracking_performance/scripts
+root -l -b -q 'offline_perf.C("/my/ntuples/QED_mumu","../output/offperf_qed_mumu.root",0,false,true,4,1)'
+root -l -b -q 'plot_offline_perf.C("../output/offperf_qed_mumu.root")'
+```
+
+```bash
+cd analyses/L1_tracking_performance/output
+root -l -b -q '../scripts/compare_eff.C(0,true,"eff_qed_mumu.root","/my/ntuples/DefaultStub/QED_mumu","/my/ntuples/DummyStub/QED_mumu")'
+root -l -b -q '../scripts/plot_eff.C("eff_qed_mumu.root")'
+```
+
+Each `analyses/*/README.md` lists every macro and argument. The fill macros
+print which files they found, so a wrong path shows up immediately.
+
 ## Simulations
 ### Available generator fragments are kept here: https://github.com/davidlw/genproductions. 
 ### For UPC2024 as an example: https://github.com/davidlw/genproductions/tree/UPC2024/genfragments/PbPb_5p36TeV/Starlight

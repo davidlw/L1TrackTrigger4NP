@@ -29,6 +29,7 @@
 #include <vector>
 #include <cmath>
 #include <cstdio>
+#include "../../common/InputFiles.h"
 
 namespace {
 
@@ -40,10 +41,9 @@ void SaveBoth(TCanvas* c, const char* pdfPath) {
   c->SaveAs(png);
 }
 
-const char* kDirDefault =
-    "/Users/wl33/Documents/DefaultStub/pythia_pp";
-const char* kDirDummy =
-    "/Users/wl33/Documents/DummyStub/pythia_pp";
+// Set on the command line (arguments 2 and 3); a directory of *.root or one file.
+const char* kDirDefault = "";
+const char* kDirDummy = "";
 const char* kTreePath = "L1TrackHitNtupleMaker/eventTree";
 
 const char* kLayerName[11] = {"L1", "L2", "L3", "L4", "L5", "L6",
@@ -68,9 +68,9 @@ struct Set {
 };
 
 void Fill(const char* dir, int maxEvents, Set& s) {
-  for (int i = 1; i <= 2; ++i) {
+  for (const auto& path : ListRootFiles(dir)) {
     if (s.nEvt >= maxEvents) break;
-    TFile* f = TFile::Open(Form("%s/L1TrackHitNtuple_UPC_v4_%d.root", dir, i));
+    TFile* f = TFile::Open(path);
     if (!f || f->IsZombie()) continue;
     TTree* t = (TTree*)f->Get(kTreePath);
     if (!t) { f->Close(); continue; }
@@ -121,7 +121,7 @@ void Fill(const char* dir, int maxEvents, Set& s) {
       }
     }
     f->Close();
-    printf("[info] file %d done (%ld events)\n", i, s.nEvt);
+    printf("[info] %s done (%ld events)\n", gSystem->BaseName(path), s.nEvt);
     fflush(stdout);
   }
 }
@@ -204,7 +204,13 @@ void Overlay(TH1D* hd, TH1D* hu, const char* xtitle, const char* title, const ch
 
 }  // namespace
 
-void compare_allstub_pp(int maxEvents = 1000) {
+void compare_allstub_pp(int maxEvents = 1000, const char* dirDef = "", const char* dirDum = "") {
+  if (strlen(dirDef)) kDirDefault = dirDef;
+  if (strlen(dirDum)) kDirDummy = dirDum;
+  if (!strlen(kDirDefault) || !strlen(kDirDummy)) {
+    printf("give the Default-stub and Dummy-stub ntuple locations (a directory of *.root, or one file)\n");
+    return;
+  }
   gROOT->SetBatch(true);
   gStyle->SetOptStat(0);
 

@@ -38,6 +38,7 @@
 #include <vector>
 #include <cmath>
 #include <cstdio>
+#include "../../common/InputFiles.h"
 
 namespace {
 
@@ -81,8 +82,7 @@ struct Reader {
 }  // namespace
 
 void mbeff_offline(const char* input, const char* outname = "../output/mbeff.root",
-                   int nfiles = 0, double nchMax = 200,
-                   const char* pattern = "OfflineTrackNtuple_%d.root") {
+                   int nfiles = 0, double nchMax = 200) {
   gROOT->SetBatch(true);
 
   auto* den    = new TH1D("den_mb",  "", kNBin, kLo, kHi);
@@ -95,12 +95,8 @@ void mbeff_offline(const char* input, const char* outname = "../output/mbeff.roo
   for (auto* h : {den, numT, numR, nchT, nchR}) h->Sumw2();
 
   long nev = 0, nfile = 0;
-  std::vector<TString> paths;
-  if (nfiles <= 0) paths.push_back(input);
-  else for (int i = 1; i <= nfiles; ++i) {
-    TString p = TString(input) + "/" + Form(pattern, i);
-    if (!gSystem->AccessPathName(p)) paths.push_back(p);
-  }
+  // one file, or a directory of *.root (first nfiles of them; 0 = all)
+  std::vector<TString> paths = ListRootFiles(input, nfiles);
 
   for (const auto& p : paths) {
     Reader R;

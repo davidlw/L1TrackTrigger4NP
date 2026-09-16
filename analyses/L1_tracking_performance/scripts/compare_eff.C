@@ -33,11 +33,13 @@
 #include <vector>
 #include <cmath>
 #include <cstdio>
+#include "../../common/InputFiles.h"
 
 namespace {
 
-const char* kDirDefault = "/Users/wl33/Documents/DefaultStub/STARlight_QED_mumu";
-const char* kDirDummy = "/Users/wl33/Documents/DummyStub/STARligt_QED_mumu";
+// Set on the command line (arguments 4 and 5); a directory of *.root or one file.
+const char* kDirDefault = "";
+const char* kDirDummy = "";
 const char* kTreePath = "L1TrackHitNtupleMaker/eventTree";
 
 // The track finder emits nothing below ~1.95 GeV, so the eta / phi / z0
@@ -228,9 +230,7 @@ struct Totals {
 // be contiguous and the two samples need not have the same ones.
 void Run(const char* dir, int nfiles, bool muonsOnly, Hists& h, Totals& tot) {
   std::vector<TP> tps;
-  for (int i = 1; i <= nfiles; ++i) {
-    TString path = Form("%s/L1TrackHitNtuple_UPC_v4_%d.root", dir, i);
-    if (gSystem->AccessPathName(path)) continue;
+  for (const auto& path : ListRootFiles(dir, nfiles)) {
     Reader R;
     if (!R.Open(path)) { R.Close(); continue; }
     ++tot.nFiles;
@@ -254,7 +254,7 @@ void Run(const char* dir, int nfiles, bool muonsOnly, Hists& h, Totals& tot) {
       }
     }
     R.Close();
-    printf("[info] %s file %d done\n", dir, i);
+    printf("[info] %s done\n", gSystem->BaseName(path));
     fflush(stdout);
   }
 }
@@ -274,6 +274,10 @@ void compare_eff(int nfiles = 50, bool muonsOnly = true,
                  const char* dirDum = "") {
   if (strlen(dirDef)) kDirDefault = dirDef;
   if (strlen(dirDum)) kDirDummy = dirDum;
+  if (!strlen(kDirDefault) || !strlen(kDirDummy)) {
+    printf("give the Default-stub and Dummy-stub ntuple locations (a directory of *.root, or one file)\n");
+    return;
+  }
   gROOT->SetBatch(true);
 
   const double ptbins[] = {0.0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8,

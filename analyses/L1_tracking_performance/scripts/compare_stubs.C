@@ -71,18 +71,17 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include "../../common/InputFiles.h"
 
 namespace {
 
 const char* kTreePath = "L1TrackHitNtupleMaker/eventTree";
 
-// nalewis EPOS pPb, 2026-08-25
-const char* kDirDefault =
-    "/eos/cms/store/group/phys_heavyions/nalewis/EPOSpPbPhase2_PrivateMC/"
-    "crab_EPOSpPbPhase2_PrivateMC/260825_201453/0000";
-const char* kDirDummy =
-    "/eos/cms/store/group/phys_heavyions/nalewis/EPOSpPbPhase2_PrivateMC/"
-    "crab_EPOSpPbPhase2_PrivateMC/260825_213152/0000";
+// Set on the command line (arguments 2 and 3); a directory of *.root or one file.
+// The EPOS pPb productions used in the README are nalewis 260825_201453 (default)
+// and 260825_213152 (dummy) under /eos/cms/store/group/phys_heavyions/nalewis/.
+const char* kDirDefault = "";
+const char* kDirDummy = "";
 
 void SaveBoth(TCanvas* c, const char* pdfPath) {
   c->SaveAs(pdfPath);
@@ -146,29 +145,6 @@ struct Reader {
   }
 };
 
-// List the .root files in a directory rather than assuming they are numbered
-// 1..N. CRAB job numbers are not contiguous -- a partial production can hold a
-// single file called ..._27.root, which a numbered loop silently skips, leaving
-// an empty sample and no error.
-std::vector<TString> ListRootFiles(const char* dir, int nfiles) {
-  std::vector<TString> out, names;
-  TSystemDirectory d("d", dir);
-  TList* fl = d.GetListOfFiles();
-  if (!fl) { printf("[warn] cannot list %s\n", dir); return out; }
-  TIter next(fl);
-  while (auto* o = (TSystemFile*)next()) {
-    TString n = o->GetName();
-    if (!o->IsDirectory() && n.EndsWith(".root")) names.push_back(n);
-  }
-  std::sort(names.begin(), names.end());
-  for (auto& n : names) {
-    if (nfiles > 0 && (int)out.size() >= nfiles) break;
-    out.push_back(TString(dir) + "/" + n);
-  }
-  if (out.empty()) printf("[warn] no .root files in %s\n", dir);
-  return out;
-}
-
 void Run(const char* dir, int nfiles, Hists& acc, Hists& rej, long& nstubAcc,
          long& nstubRej, long& nZeroRej) {
   for (const auto& path : ListRootFiles(dir, nfiles)) {
@@ -206,6 +182,10 @@ void compare_stubs(int nfiles = 5, const char* dirDef = "", const char* dirDum =
                    const char* outname = "../output/stub_epos.root") {
   if (strlen(dirDef)) kDirDefault = dirDef;
   if (strlen(dirDum)) kDirDummy = dirDum;
+  if (!strlen(kDirDefault) || !strlen(kDirDummy)) {
+    printf("give the Default-stub and Dummy-stub ntuple locations (a directory of *.root, or one file)\n");
+    return;
+  }
   gROOT->SetBatch(true);
 
   Hists defA, defR, dumA, dumR;

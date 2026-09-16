@@ -30,13 +30,14 @@
 #include <vector>
 #include <cmath>
 #include <cstdio>
+#include "../../common/InputFiles.h"
 
 namespace {
 
-const char* kDirDefault =
-    "/Users/wl33/Documents/DefaultStub/STARlight_QED_mumu";
-const char* kDirDummy =
-    "/Users/wl33/Documents/DummyStub/STARligt_QED_mumu";
+// Set on the command line (arguments 3 and 4); a directory of *.root or one file.
+// The two productions must hold the SAME events, file for file.
+const char* kDirDefault = "";
+const char* kDirDummy = "";
 const char* kTreePath = "L1TrackHitNtupleMaker/eventTree";
 
 // Coarse bins for the quoted tables. Nothing is reconstructed below ~1.8 GeV.
@@ -183,6 +184,10 @@ void compare_res(int nfiles = 50, const char* outname = "res_qed_mumu.root",
                  const char* dirDef = "", const char* dirDum = "") {
   if (strlen(dirDef)) kDirDefault = dirDef;
   if (strlen(dirDum)) kDirDummy = dirDum;
+  if (!strlen(kDirDefault) || !strlen(kDirDummy)) {
+    printf("give the Default-stub and Dummy-stub ntuple locations (a directory of *.root, or one file)\n");
+    return;
+  }
   gROOT->SetBatch(true);
   gStyle->SetOptStat(0);
 
@@ -223,18 +228,21 @@ void compare_res(int nfiles = 50, const char* outname = "res_qed_mumu.root",
 
   long nEvents = 0, nFilesOK = 0, nMatchDef = 0, nMatchDum = 0, nCommon = 0;
 
-  for (int i = 1; i <= nfiles; ++i) {
+  // same basename on both sides = same events; anything unpaired is dropped
+  std::vector<TString> filesA = ListRootFiles(kDirDefault, nfiles), filesB = ListRootFiles(kDirDummy, nfiles);
+  KeepCommonFiles(filesA, filesB);
+  for (size_t i = 0; i < filesA.size(); ++i) {
     Reader A, B;
-    bool okA = A.Open(Form("%s/L1TrackHitNtuple_UPC_v4_%d.root", kDirDefault, i));
-    bool okB = B.Open(Form("%s/L1TrackHitNtuple_UPC_v4_%d.root", kDirDummy, i));
+    bool okA = A.Open(filesA[i]);
+    bool okB = B.Open(filesB[i]);
     if (!okA || !okB) {
-      printf("[warn] skipping index %d (def=%d dum=%d)\n", i, okA, okB);
+      printf("[warn] skipping %s (def=%d dum=%d)\n", gSystem->BaseName(filesA[i]), okA, okB);
       A.Close(); B.Close();
       continue;
     }
     Long64_t nA = A.tree->GetEntries(), nB = B.tree->GetEntries();
     if (nA != nB) {
-      printf("[warn] index %d entry mismatch %lld vs %lld -- skipping\n", i, nA, nB);
+      printf("[warn] %s entry mismatch %lld vs %lld -- skipping\n", gSystem->BaseName(filesA[i]), nA, nB);
       A.Close(); B.Close();
       continue;
     }
@@ -290,7 +298,7 @@ void compare_res(int nfiles = 50, const char* outname = "res_qed_mumu.root",
     }
     A.Close();
     B.Close();
-    printf("[info] file %2d done (%lld events)\n", i, nA);
+    printf("[info] %s done (%lld events)\n", gSystem->BaseName(filesA[i]), nA);
     fflush(stdout);
   }
 

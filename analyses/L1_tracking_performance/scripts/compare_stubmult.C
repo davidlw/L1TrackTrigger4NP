@@ -23,17 +23,15 @@
 #include <vector>
 #include <cmath>
 #include <cstdio>
+#include "../../common/InputFiles.h"
 
 namespace {
 
-const char* kQEDDefault =
-    "/Users/wl33/Documents/DefaultStub/STARlight_QED_mumu";
-const char* kQEDDummy =
-    "/Users/wl33/Documents/DummyStub/STARligt_QED_mumu";
-const char* kPPDefault =
-    "/Users/wl33/Documents/DefaultStub/pythia_pp";
-const char* kPPDummy =
-    "/Users/wl33/Documents/DummyStub/pythia_pp";
+// Set on the command line (arguments 2 and 3); a directory of *.root or one file.
+const char* kQEDDefault = "";
+const char* kQEDDummy = "";
+const char* kPPDefault = "";
+const char* kPPDummy = "";
 const char* kTreePath = "L1TrackHitNtupleMaker/eventTree";
 
 // Log-spaced bins, with the first bin holding zero (log(0) is undefined but
@@ -49,18 +47,19 @@ TH1D* BookHist(const char* name, bool logx, double xmax) {
   return new TH1D(name, "", nb, edges.data());
 }
 
-// refDir restricts the loop to file indices that exist in BOTH samples, so the two
+// refDir restricts the loop to file names that exist in BOTH samples, so the two
 // sides cover the same underlying events. Needed for HYDJet, where the default
-// production has only 14 of the 100 indices.
+// production has only 14 of the 100 files.
 void Fill(const char* dir, const char* refDir, int nfiles, int maxEvents, TH1D* hAcc,
           TH1D* hRej, long& nEvt, long& nAcc, long& nRej) {
-  for (int i = 1; i <= nfiles; ++i) {
+  std::vector<TString> files = ListRootFiles(dir, nfiles);
+  if (strlen(refDir)) {
+    std::vector<TString> ref = ListRootFiles(refDir, nfiles);
+    KeepCommonFiles(files, ref);
+  }
+  for (const auto& path : files) {
     if (maxEvents > 0 && nEvt >= maxEvents) break;
-    if (strlen(refDir)) {
-      if (gSystem->AccessPathName(Form("%s/L1TrackHitNtuple_UPC_v4_%d.root", refDir, i)))
-        continue;  // index missing in the other sample -- skip it here too
-    }
-    TFile* f = TFile::Open(Form("%s/L1TrackHitNtuple_UPC_v4_%d.root", dir, i));
+    TFile* f = TFile::Open(path);
     if (!f || f->IsZombie()) continue;
     TTree* t = (TTree*)f->Get(kTreePath);
     if (!t) { f->Close(); continue; }
@@ -80,7 +79,7 @@ void Fill(const char* dir, const char* refDir, int nfiles, int maxEvents, TH1D* 
       nRej += r;
     }
     f->Close();
-    printf("[info] file %d done (%ld events)\n", i, nEvt);
+    printf("[info] %s done (%ld events)\n", gSystem->BaseName(path), nEvt);
     fflush(stdout);
   }
 }
@@ -119,6 +118,10 @@ void compare_stubmult(int nfiles = 10, const char* dirDef = "", const char* dirD
   // Empty strings select the QED mumu sample; "pp" selects pythia pp.
   const char* dDef = strlen(dirDef) ? dirDef : (strcmp(tag, "pp") == 0 ? kPPDefault : kQEDDefault);
   const char* dDum = strlen(dirDum) ? dirDum : (strcmp(tag, "pp") == 0 ? kPPDummy : kQEDDummy);
+  if (!strlen(dDef) || !strlen(dDum)) {
+    printf("give the Default-stub and Dummy-stub ntuple locations (a directory of *.root, or one file)\n");
+    return;
+  }
 
   auto* hAccD = BookHist(Form("nstub_acc_def_%s", tag), logx, xmax);
   auto* hRejD = BookHist(Form("nstub_rej_def_%s", tag), logx, xmax);

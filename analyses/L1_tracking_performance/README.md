@@ -19,16 +19,17 @@ pythia pp.
 
 ```bash
 cd output
-root -l -b -q '../scripts/compare_eff.C(50)'                  # efficiency + duplicate rate
+D=/my/path/DefaultStub/QED_mumu; U=/my/path/DummyStub/QED_mumu    # directories or single files
+root -l -b -q "../scripts/compare_eff.C(50,true,\"eff_qed_mumu.root\",\"$D\",\"$U\")"    # efficiency + duplicate rate
 root -l -b -q '../scripts/plot_eff.C("eff_qed_mumu.root")'
-root -l -b -q '../scripts/compare_fake.C(50)'                 # fake rate
+root -l -b -q "../scripts/compare_fake.C(50,\"fake_qed_mumu.root\",\"$D\",\"$U\")"        # fake rate
 root -l -b -q '../scripts/plot_fake.C("fake_qed_mumu.root")'
 ```
 
-The built-in input paths are machine-specific — pass `dirDef` / `dirDum` for your own
-files. [`scripts/README.md`](scripts/README.md) covers that, every performance
-variable with its command, and the branch pitfalls worth knowing before you trust a
-number.
+The input locations are always arguments: a directory (every `*.root` in it, any
+names) or one file. [`scripts/README.md`](scripts/README.md) covers that, every
+performance variable with its command, and the branch pitfalls worth knowing before
+you trust a number.
 
 ## Results are deliberately not kept here
 

@@ -35,6 +35,7 @@
 #include <vector>
 #include <cmath>
 #include <cstdio>
+#include "../../common/InputFiles.h"
 
 namespace {
 
@@ -67,9 +68,7 @@ struct Set {
 };
 
 void Fill(const char* dir, int nfiles, Set& s) {
-  for (int i = 1; i <= nfiles; ++i) {
-    TString p = Form("%s/L1TrackHitNtuple_UPC_v4_%d.root", dir, i);
-    if (gSystem->AccessPathName(p)) continue;
+  for (const auto& p : ListRootFiles(dir, nfiles)) {
     TFile* f = TFile::Open(p);
     if (!f || f->IsZombie()) continue;
     TTree* t = (TTree*)f->Get(kTreePath);

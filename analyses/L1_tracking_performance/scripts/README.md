@@ -12,19 +12,23 @@ paths only resolve from there.
 ```bash
 cd analyses/L1_tracking_performance/output
 
-root -l -b -q '../scripts/compare_eff.C(50)'                    # efficiency + duplicate rate
+D=/my/path/DefaultStub/QED_mumu; U=/my/path/DummyStub/QED_mumu    # directories or single files
+root -l -b -q "../scripts/compare_eff.C(50,true,\"eff_qed_mumu.root\",\"$D\",\"$U\")"    # efficiency + duplicate rate
 root -l -b -q '../scripts/plot_eff.C("eff_qed_mumu.root")'
-root -l -b -q '../scripts/compare_fake.C(50)'                   # fake rate
+root -l -b -q "../scripts/compare_fake.C(50,\"fake_qed_mumu.root\",\"$D\",\"$U\")"        # fake rate
 root -l -b -q '../scripts/plot_fake.C("fake_qed_mumu.root")'
 ```
 
-That uses the built-in sample. **For your own files, set the paths first.**
+There is no built-in sample: **the input locations are always arguments.** A
+macro run without them stops with a message.
 
 ## Setting the input paths
 
-Each `compare_*` macro reads two directories, one per production. Pass them as
-arguments — every macro takes `dirDef` / `dirDum`, and an empty string keeps the
-default:
+Each `compare_*` macro reads two productions, Default stub and Dummy stub. Each
+location is either a **directory** -- every `*.root` in it is read, sorted by
+name, and `nfiles` caps how many (0 = all) -- or a **single file**. File names do
+not matter, so three files called `_4`, `_17`, `_22` copied to a laptop work as
+well as a full `/eos/.../0000`. What was found is printed at the start of the run.
 
 ```bash
 root -l -b -q '../scripts/compare_eff.C(100,false,"eff_mine.root",\
@@ -32,7 +36,9 @@ root -l -b -q '../scripts/compare_eff.C(100,false,"eff_mine.root",\
   "/my/path/DummyStub/HYDJet_PbPb")'
 ```
 
-Or edit `kDirDefault` / `kDirDummy` at the top of the macro.
+Macros that pair the two productions event by event (`compare_res`, and
+`compare_stubmult` with `commonIndicesOnly`) keep only the file names present on
+both sides. The file lister is shared: [`../../common/InputFiles.h`](../../common/InputFiles.h).
 
 **Assume the ntuples live on lxplus**, under `/eos/cms/store/group/phys_heavyions/`.
 Run the `compare_*` pass there; it is the only step that touches the samples. The

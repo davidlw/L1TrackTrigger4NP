@@ -19,6 +19,7 @@
 #include <vector>
 #include <cmath>
 #include <cstdio>
+#include "../../common/InputFiles.h"
 
 namespace {
 
@@ -30,10 +31,9 @@ void SaveBoth(TCanvas* c, const char* pdfPath) {
   c->SaveAs(png);
 }
 
-const char* kDirDefault =
-    "/Users/wl33/Documents/DefaultStub/STARlight_QED_mumu";
-const char* kDirDummy =
-    "/Users/wl33/Documents/DummyStub/STARligt_QED_mumu";
+// Set on the command line (arguments 2 and 3); a directory of *.root or one file.
+const char* kDirDefault = "";
+const char* kDirDummy = "";
 const char* kTreePath = "L1TrackHitNtupleMaker/eventTree";
 
 struct Q {
@@ -86,8 +86,8 @@ void Report(const char* label, Q& q) {
 }
 
 void Fill(const char* dir, int nfiles, Q& q) {
-  for (int i = 1; i <= nfiles; ++i) {
-    TFile* f = TFile::Open(Form("%s/L1TrackHitNtuple_UPC_v4_%d.root", dir, i));
+  for (const auto& path : ListRootFiles(dir, nfiles)) {
+    TFile* f = TFile::Open(path);
     if (!f || f->IsZombie()) continue;
     TTree* t = (TTree*)f->Get(kTreePath);
     if (!t) { f->Close(); continue; }
@@ -135,7 +135,7 @@ void Fill(const char* dir, int nfiles, Q& q) {
       }
     }
     f->Close();
-    printf("[info] file %d done\n", i);
+    printf("[info] %s done\n", gSystem->BaseName(path));
     fflush(stdout);
   }
 }
@@ -147,6 +147,10 @@ void compare_trkquality(int nfiles = 10, const char* dirDef = "", const char* di
                         const char* tag = "") {
   if (strlen(dirDef)) kDirDefault = dirDef;
   if (strlen(dirDum)) kDirDummy = dirDum;
+  if (!strlen(kDirDefault) || !strlen(kDirDummy)) {
+    printf("give the Default-stub and Dummy-stub ntuple locations (a directory of *.root, or one file)\n");
+    return;
+  }
   gROOT->SetBatch(true);
   gStyle->SetOptStat(0);
 
@@ -158,7 +162,7 @@ void compare_trkquality(int nfiles = 10, const char* dirDef = "", const char* di
   printf("=== reading Dummy Stub ===\n");
   Fill(kDirDummy, nfiles, qu);
 
-  printf("\n============ L1 track quality, %d files/sample ============\n", nfiles);
+  printf("\n============ L1 track quality ============\n");
   Report("Default Stub", qd);
   Report("Dummy Stub", qu);
 
