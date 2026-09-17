@@ -36,6 +36,12 @@ root -l -b -q '../scripts/compare_eff.C(100,false,"eff_mine.root",\
   "/my/path/DummyStub/HYDJet_PbPb")'
 ```
 
+`compare_eff` takes a trailing `pdgSel` (11 electrons, 13 muons, 211 pions; 0 = all)
+after `dirDum`; `muonsOnly` is the old spelling of 13. On the STARlight QED samples
+with default stubs the L1 efficiency at 2-2.5 GeV is 0.52 for electrons against 0.96
+for muons -- bremsstrahlung breaks the single-helix assumption -- so e+e- is not
+"mu+mu- with another label".
+
 Macros that pair the two productions event by event (`compare_res`, and
 `compare_stubmult` with `commonIndicesOnly`) keep only the file names present on
 both sides. The file lister is shared: [`../../common/InputFiles.h`](../../common/InputFiles.h).

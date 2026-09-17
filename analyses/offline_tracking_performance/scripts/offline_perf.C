@@ -280,7 +280,7 @@ struct Totals {
   long nTrk = 0, nFake = 0, nTrkHi = 0, nFakeHi = 0;
 };
 
-void RunOne(const char* path, bool muonsOnly, bool hpOnly, int tpClass,
+void RunOne(const char* path, int pdgSel, bool hpOnly, int tpClass,
             Hists& h, Totals& tot) {
   Reader R;
   if (!R.Open(path)) { printf("[warn] cannot read %s\n", path); R.Close(); return; }
@@ -318,7 +318,7 @@ void RunOne(const char* path, bool muonsOnly, bool hpOnly, int tpClass,
 
     for (size_t i = 0; i < tps.size(); ++i) {
       TP t = tps[i];
-      if (muonsOnly && std::abs(t.pdgid) != 13) continue;
+      if (pdgSel && std::abs(t.pdgid) != pdgSel) continue;
       if (tpClass && t.cls() != tpClass) continue;
       t.nmatch = nsel[i];               // selection-aware, replaces tp_nmatch
       h.FillTP(t, nch);
@@ -367,7 +367,10 @@ void PrintRate(const char* label, double num, double den) {
 void offline_perf(const char* input = "../output/OfflineTrackNtuple.root",
                   const char* outname = "../output/offperf_qed_mumu.root",
                   int nfiles = 0, bool muonsOnly = false, bool hpOnly = false,
-                  double nchMax = 200, int tpClass = 0) {
+                  double nchMax = 200, int tpClass = 0, int pdgSel = 0) {
+  // pdgSel: keep only truth particles with |pdgId| == pdgSel (11 electrons,
+  // 13 muons, 211 pions ...); 0 = all. muonsOnly is the old spelling of 13.
+  if (muonsOnly && !pdgSel) pdgSel = 13;
   gROOT->SetBatch(true);
 
   // Fine below 1 GeV, where the turn-on is; drawn on a log x axis.
@@ -381,14 +384,14 @@ void offline_perf(const char* input = "../output/OfflineTrackNtuple.root",
 
   // one file, or a directory of *.root (first nfiles of them; 0 = all)
   for (const auto& path : ListRootFiles(input, nfiles))
-    RunOne(path, muonsOnly, hpOnly, tpClass, h, tot);
+    RunOne(path, pdgSel, hpOnly, tpClass, h, tot);
 
   printf("\n============== offline tracking performance ==============\n");
   printf("efficiency     = N(TP matched by >=1 selected track) / N(tp)\n");
   printf("fake rate      = N(trk_isTrue == 0) / N(selected trk)\n");
   printf("duplicate rate = N(TP matched by  >1 selected track) / N(matched TP)\n");
   printf("%ld files, %ld events%s%s\n", tot.nFiles, tot.nEvents,
-         muonsOnly ? "  (muons only)" : "",
+         pdgSel ? Form("  (|pdgId| == %d only)", pdgSel) : "",
          hpOnly ? "  [highPurity tracks only]" : "  [all tracks]");
   printf("truth particles: %s\n", tpClass == 1 ? "PRIMARY only (tp_ngenpart > 0)"
                                  : tpClass == 2 ? "SECONDARY only (tp_ngenpart == 0, made by GEANT)"

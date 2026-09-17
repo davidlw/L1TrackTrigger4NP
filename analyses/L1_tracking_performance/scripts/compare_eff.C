@@ -72,6 +72,10 @@ struct Reader {
     if (!file || file->IsZombie()) return false;
     tree = (TTree*)file->Get(kTreePath);
     if (!tree) return false;
+    if (!tree->GetBranch("tp_pt")) {  // e.g. a stub-only production
+      printf("[warn] %s has no tp_pt branch -- skipped\n", gSystem->BaseName(path));
+      return false;
+    }
     // Enable only what is needed -- the tp_* branches are a small fraction of
     // these files, so this is the difference between seconds and minutes.
     tree->SetBranchStatus("*", 0);
@@ -228,7 +232,7 @@ struct Totals {
 
 // Read one production. Missing file indices are skipped, so the indices need not
 // be contiguous and the two samples need not have the same ones.
-void Run(const char* dir, int nfiles, bool muonsOnly, Hists& h, Totals& tot) {
+void Run(const char* dir, int nfiles, int pdgSel, Hists& h, Totals& tot) {
   std::vector<TP> tps;
   for (const auto& path : ListRootFiles(dir, nfiles)) {
     Reader R;
@@ -239,7 +243,7 @@ void Run(const char* dir, int nfiles, bool muonsOnly, Hists& h, Totals& tot) {
       R.Flatten(tps);
       ++tot.nEvents;
       for (const auto& t : tps) {
-        if (muonsOnly && std::abs(t.pdgid) != 13) continue;
+        if (pdgSel && std::abs(t.pdgid) != pdgSel) continue;
         bool m = t.nmatch > 0;
         h.Fill(t, m);
         ++tot.nTP;
@@ -271,7 +275,10 @@ void PrintEff(const char* label, double num, double den) {
 // tracking particles are overwhelmingly pions / kaons / protons.
 void compare_eff(int nfiles = 50, bool muonsOnly = true,
                  const char* outname = "eff_qed_mumu.root", const char* dirDef = "",
-                 const char* dirDum = "") {
+                 const char* dirDum = "", int pdgSel = 0) {
+  // pdgSel: keep only truth particles with |pdgId| == pdgSel (11 electrons,
+  // 13 muons, 211 pions ...); 0 = all. muonsOnly is the old spelling of 13.
+  if (muonsOnly && !pdgSel) pdgSel = 13;
   if (strlen(dirDef)) kDirDefault = dirDef;
   if (strlen(dirDum)) kDirDummy = dirDum;
   if (!strlen(kDirDefault) || !strlen(kDirDummy)) {
@@ -290,13 +297,13 @@ void compare_eff(int nfiles = 50, bool muonsOnly = true,
   Totals tDef, tDum;
 
   printf("=== Default Stub ===\n");
-  Run(kDirDefault, nfiles, muonsOnly, hDef, tDef);
+  Run(kDirDefault, nfiles, pdgSel, hDef, tDef);
   printf("=== Dummy Stub ===\n");
-  Run(kDirDummy, nfiles, muonsOnly, hDum, tDum);
+  Run(kDirDummy, nfiles, pdgSel, hDum, tDum);
 
   printf("\n================ L1 tracking efficiency ================\n");
   printf("N(tp_nmatch > 0) / N(tracking particles), each sample on its own TPs\n");
-  printf("selection: %s\n", muonsOnly ? "|pdgid| == 13" : "all pdgid");
+  printf("selection: %s\n", pdgSel ? Form("|pdgid| == %d", pdgSel) : "all pdgid");
   printf("default: %ld files, %ld events    dummy: %ld files, %ld events\n",
          tDef.nFiles, tDef.nEvents, tDum.nFiles, tDum.nEvents);
 

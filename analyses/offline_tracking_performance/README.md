@@ -55,8 +55,9 @@ For many files pass the **directory** -- every `*.root` in it is read, whatever
 the names -- how many to read, and the rest:
 
 ```
-# input, outname, nfiles, muonsOnly, hpOnly, nchMax, tpClass
+# input, outname, nfiles, muonsOnly, hpOnly, nchMax, tpClass, pdgSel
 root -l -b -q 'offline_perf.C("/eos/.../0000","../output/offperf_hydjet_hp.root",900,false,true,8000,1)'
+root -l -b -q 'offline_perf.C("/eos/.../QED_ee/0000","../output/offperf_qedee_hp_e.root",0,false,true,4,1,11)'   # electrons only
 ```
 
 | argument | meaning |
@@ -66,6 +67,7 @@ root -l -b -q 'offline_perf.C("/eos/.../0000","../output/offperf_hydjet_hp.root"
 | `hpOnly` | keep only highPurity tracks |
 | `nchMax` | upper edge of the Nch axis -- **sample dependent**, see below |
 | `tpClass` | 0 all, 1 primary (`tp_ngenpart > 0`), 2 GEANT secondary |
+| `pdgSel` | keep only truth particles with this \|pdgId\| (11 electrons, 13 muons, 211 pions); 0 = all. `muonsOnly` is the old spelling of 13 |
 
 `nchMax` measured on the current samples: QED µµ **4**, EPOS pPb **250**,
 HYDJET PbPb **8000**. Entries above it go to overflow and vanish from the plot,
