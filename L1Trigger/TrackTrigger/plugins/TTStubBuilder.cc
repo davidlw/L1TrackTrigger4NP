@@ -29,11 +29,12 @@ void TTStubBuilder<Ref_Phase2TrackerDigi_>::updateStubs(
     /// detid of the two components.
     ///This should be done via a TrackerTopology method that is not yet available.
     DetId lowerDetid = thisStackedDetId + 1;
-    DetId upperDetid = thisStackedDetId + 2;
+    //DetId upperDetid = thisStackedDetId + 2;
+    //!!!!!!!!!!!!!!!!!!!!!!
 
     /// Get the DetSets of the clusters
     edmNew::DetSet<TTCluster<Ref_Phase2TrackerDigi_>> lowerClusters = (*clusterHandle)[lowerDetid];
-    edmNew::DetSet<TTCluster<Ref_Phase2TrackerDigi_>> upperClusters = (*clusterHandle)[upperDetid];
+    //edmNew::DetSet<TTCluster<Ref_Phase2TrackerDigi_>> upperClusters = (*clusterHandle)[upperDetid];
 
     /// Get the DetSet of the stubs
     edmNew::DetSet<TTStub<Ref_Phase2TrackerDigi_>> theseStubs = inputEDstubs[thisStackedDetId];
@@ -48,11 +49,11 @@ void TTStubBuilder<Ref_Phase2TrackerDigi_>::updateStubs(
       /// Compare the clusters stored in the stub with the ones of this module
       const edm::Ref<edmNew::DetSetVector<TTCluster<Ref_Phase2TrackerDigi_>>, TTCluster<Ref_Phase2TrackerDigi_>>&
           lowerClusterToBeReplaced = stub.clusterRef(0);
-      const edm::Ref<edmNew::DetSetVector<TTCluster<Ref_Phase2TrackerDigi_>>, TTCluster<Ref_Phase2TrackerDigi_>>&
-          upperClusterToBeReplaced = stub.clusterRef(1);
+      //const edm::Ref<edmNew::DetSetVector<TTCluster<Ref_Phase2TrackerDigi_>>, TTCluster<Ref_Phase2TrackerDigi_>>&
+      //    upperClusterToBeReplaced = stub.clusterRef(1);
 
       bool lowerOK = false;
-      bool upperOK = false;
+      //bool upperOK = false;
 
       for (clusterIter = lowerClusters.begin(); clusterIter != lowerClusters.end() && !lowerOK; ++clusterIter) {
         if (clusterIter->getHits() == lowerClusterToBeReplaced->getHits()) {
@@ -61,21 +62,21 @@ void TTStubBuilder<Ref_Phase2TrackerDigi_>::updateStubs(
         }
       }
 
-      for (clusterIter = upperClusters.begin(); clusterIter != upperClusters.end() && !upperOK; ++clusterIter) {
+      /*for (clusterIter = upperClusters.begin(); clusterIter != upperClusters.end() && !upperOK; ++clusterIter) {
         if (clusterIter->getHits() == upperClusterToBeReplaced->getHits()) {
           tempTTStub.addClusterRef(edmNew::makeRefTo(clusterHandle, clusterIter));
           upperOK = true;
         }
-      }
+      }*///!!!!!!!!!!!!!!!
 
       /// If no compatible clusters were found, skip to the next one
-      if (!lowerOK || !upperOK)
+      if (!lowerOK )//|| !upperOK)
         continue;
 
       /// getters for RawBend & BendOffset are in FULL-strip units, setters are in HALF-strip units
-      tempTTStub.setRawBend(2. * stub.rawBend());
-      tempTTStub.setBendOffset(2. * stub.bendOffset());
-      tempTTStub.setBendBE(stub.bendBE());
+      //tempTTStub.setRawBend(2. * stub.rawBend());
+      //tempTTStub.setBendOffset(2. * stub.bendOffset());
+      //tempTTStub.setBendBE(stub.bendBE());
       tempTTStub.setModuleTypePS(stub.moduleTypePS());
 
       outputFiller.push_back(tempTTStub);
@@ -120,7 +121,7 @@ void TTStubBuilder<Ref_Phase2TrackerDigi_>::produce(edm::Event& iEvent, const ed
     if (!tTopo->isLower(detid))
       continue;  // loop on the stacks: choose the lower sensor
     DetId lowerDetid = detid;
-    DetId upperDetid = tTopo->partnerDetId(detid);
+    //DetId upperDetid = tTopo->partnerDetId(detid);
     DetId stackDetid = tTopo->stack(detid);
     bool isPS = (theTrackerGeom->getDetectorType(stackDetid) == TrackerGeometry::ModuleType::Ph2PSP);
 
@@ -144,30 +145,31 @@ void TTStubBuilder<Ref_Phase2TrackerDigi_>::produce(edm::Event& iEvent, const ed
     std::vector<std::pair<unsigned int, double>> bendMap;
 
     /// Go on only if both detectors have Clusters
-    if (clusterHandle->find(lowerDetid) == clusterHandle->end() ||
-        clusterHandle->find(upperDetid) == clusterHandle->end())
+    if (clusterHandle->find(lowerDetid) == clusterHandle->end() )//||
+        //clusterHandle->find(upperDetid) == clusterHandle->end())
       continue;
 
     /// Get the DetSets of the Clusters
     edmNew::DetSet<TTCluster<Ref_Phase2TrackerDigi_>> lowerClusters = (*clusterHandle)[lowerDetid];
-    edmNew::DetSet<TTCluster<Ref_Phase2TrackerDigi_>> upperClusters = (*clusterHandle)[upperDetid];
+    //edmNew::DetSet<TTCluster<Ref_Phase2TrackerDigi_>> upperClusters = (*clusterHandle)[upperDetid];
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     /// If there are Clusters in both sensors, you can try and make a Stub
     /// This is ~redundant
-    if (lowerClusters.empty() || upperClusters.empty())
+    if (lowerClusters.empty() )//|| upperClusters.empty())
       continue;
 
     /// Create the vectors of objects to be passed to the FastFillers
     std::vector<TTCluster<Ref_Phase2TrackerDigi_>> tempClusLowerAcc;
     std::vector<TTCluster<Ref_Phase2TrackerDigi_>> tempClusLowerRej;
-    std::vector<TTCluster<Ref_Phase2TrackerDigi_>> tempClusUpperAcc;
-    std::vector<TTCluster<Ref_Phase2TrackerDigi_>> tempClusUpperRej;
+    //std::vector<TTCluster<Ref_Phase2TrackerDigi_>> tempClusUpperAcc;
+    //std::vector<TTCluster<Ref_Phase2TrackerDigi_>> tempClusUpperRej;
     std::vector<TTStub<Ref_Phase2TrackerDigi_>> tempStubAcc;
     std::vector<TTStub<Ref_Phase2TrackerDigi_>> tempStubRej;
     tempClusLowerAcc.clear();
     tempClusLowerRej.clear();
-    tempClusUpperAcc.clear();
-    tempClusUpperRej.clear();
+    //tempClusUpperAcc.clear();
+    //tempClusUpperRej.clear();
     tempStubAcc.clear();
     tempStubRej.clear();
 
@@ -182,35 +184,38 @@ void TTStubBuilder<Ref_Phase2TrackerDigi_>::produce(edm::Event& iEvent, const ed
       /// Temporary storage to allow only one stub per inner cluster, if requested in cfi
       std::vector<TTStub<Ref_Phase2TrackerDigi_>> tempOutput;
 
-      for (auto upperClusterIter = upperClusters.begin(); upperClusterIter != upperClusters.end(); ++upperClusterIter) {
+      //for (auto upperClusterIter = upperClusters.begin(); upperClusterIter != upperClusters.end(); ++upperClusterIter) {
         /// Build a temporary Stub
         TTStub<Ref_Phase2TrackerDigi_> tempTTStub(stackDetid);
         tempTTStub.addClusterRef(edmNew::makeRefTo(clusterHandle, lowerClusterIter));
-        tempTTStub.addClusterRef(edmNew::makeRefTo(clusterHandle, upperClusterIter));
+        //tempTTStub.addClusterRef(edmNew::makeRefTo(clusterHandle, upperClusterIter));
         tempTTStub.setModuleTypePS(isPS);
 
         /// Check for compatibility of cluster pair
-        bool thisConfirmation = false;
-        int thisDisplacement = 999999;
-        int thisOffset = 0;
-        float thisHardBend = 0;
+        bool thisConfirmation = true;//false;
+        //int thisDisplacement = 999999;
+        //int thisOffset = 0;
+        //float thisHardBend = 0;
 
-        theStubFindingAlgoHandle->PatternHitCorrelation(
-            thisConfirmation, thisDisplacement, thisOffset, thisHardBend, tempTTStub);
+        //theStubFindingAlgoHandle->PatternHitCorrelation(
+        //    thisConfirmation, thisDisplacement, thisOffset, thisHardBend, tempTTStub);
         // Removed real offset.  Ivan Reid 10/2019
 
         /// If the Stub is above threshold
         if (thisConfirmation) {
-          tempTTStub.setRawBend(thisDisplacement);
-          tempTTStub.setBendOffset(thisOffset);
-          tempTTStub.setBendBE(thisHardBend);
+          //tempTTStub.setRawBend(thisDisplacement);
+          //tempTTStub.setBendOffset(thisOffset);
+          //tempTTStub.setBendBE(thisHardBend);
+          tempTTStub.setRawBend(0);
+          tempTTStub.setBendOffset(0);
+          tempTTStub.setBendBE(0);
           tempOutput.push_back(tempTTStub);
         }  /// Stub accepted
-      }  /// End of loop over upper clusters
+      //}  /// End of loop over upper clusters
 
       /// Here tempOutput stores all the stubs from this lower cluster
       /// Check if there is need to store only one or two (2S/PS modules cases) (if only one already, skip this step)
-      if (ForbidMultipleStubs && tempOutput.size() > 1 + static_cast<unsigned int>(isPS)) {
+      /*if (ForbidMultipleStubs && tempOutput.size() > 1 + static_cast<unsigned int>(isPS)) {
         /// If so, sort the stubs by bend and keep only the first one (2S case) or the first pair (PS case) (smallest |bend|)
         std::sort(tempOutput.begin(), tempOutput.end(), TTStubBuilder<Ref_Phase2TrackerDigi_>::SortStubsBend);
 
@@ -223,7 +228,7 @@ void TTStubBuilder<Ref_Phase2TrackerDigi_>::produce(edm::Event& iEvent, const ed
 
         /// Delete all-but-the first one from tempOutput
         tempOutput.erase(tempIter, tempOutput.end());
-      }
+      }*/
 
       /// Here, tempOutput is either of size 1 (if ForbidMultupleStubs = true),
       /// or of size N with all the valid combinations ...
@@ -236,7 +241,7 @@ void TTStubBuilder<Ref_Phase2TrackerDigi_>::produce(edm::Event& iEvent, const ed
         {
           /// This means that ALL stubs go into the output
           tempClusLowerAcc.push_back(*(tempTTStub.clusterRef(0)));
-          tempClusUpperAcc.push_back(*(tempTTStub.clusterRef(1)));
+          //tempClusUpperAcc.push_back(*(tempTTStub.clusterRef(1)));
           tempStubAcc.push_back(tempTTStub);
         } else {
           bool FEreject = false;
@@ -276,10 +281,10 @@ void TTStubBuilder<Ref_Phase2TrackerDigi_>::produce(edm::Event& iEvent, const ed
           // We put it in the rejected container, flagged with offset to indicate reason.
 
           if (FEreject) {
-            tempTTStub.setRawBend(CBCFailOffset + 2. * tempTTStub.rawBend());
-            tempTTStub.setBendOffset(CBCFailOffset + 2. * tempTTStub.bendOffset());
+            //tempTTStub.setRawBend(CBCFailOffset + 2. * tempTTStub.rawBend());
+            //tempTTStub.setBendOffset(CBCFailOffset + 2. * tempTTStub.bendOffset());
             tempClusLowerRej.push_back(*(tempTTStub.clusterRef(0)));
-            tempClusUpperRej.push_back(*(tempTTStub.clusterRef(1)));
+            //tempClusUpperRej.push_back(*(tempTTStub.clusterRef(1)));
             tempStubRej.push_back(tempTTStub);
             continue;
           }
@@ -295,7 +300,7 @@ void TTStubBuilder<Ref_Phase2TrackerDigi_>::produce(edm::Event& iEvent, const ed
 
           if (moduleStubs_CIC[CIC_chip].size() <= maxStubs) {
             tempClusLowerAcc.push_back(*(tempTTStub.clusterRef(0)));
-            tempClusUpperAcc.push_back(*(tempTTStub.clusterRef(1)));
+            //tempClusUpperAcc.push_back(*(tempTTStub.clusterRef(1)));
             tempStubAcc.push_back(tempTTStub);  // The stub is kept
 
           } else {
@@ -324,14 +329,14 @@ void TTStubBuilder<Ref_Phase2TrackerDigi_>::produce(edm::Event& iEvent, const ed
 
             if (CIC_reject)  // The stub added does not pass the cut
             {
-              tempTTStub.setRawBend(CICFailOffset + 2. * tempTTStub.rawBend());
-              tempTTStub.setBendOffset(CICFailOffset + 2. * tempTTStub.bendOffset());
+              //tempTTStub.setRawBend(CICFailOffset + 2. * tempTTStub.rawBend());
+              //tempTTStub.setBendOffset(CICFailOffset + 2. * tempTTStub.bendOffset());
               tempClusLowerRej.push_back(*(tempTTStub.clusterRef(0)));
-              tempClusUpperRej.push_back(*(tempTTStub.clusterRef(1)));
+              //tempClusUpperRej.push_back(*(tempTTStub.clusterRef(1)));
               tempStubRej.push_back(tempTTStub);
             } else {
               tempClusLowerAcc.push_back(*(tempTTStub.clusterRef(0)));
-              tempClusUpperAcc.push_back(*(tempTTStub.clusterRef(1)));
+              //tempClusUpperAcc.push_back(*(tempTTStub.clusterRef(1)));
               tempStubAcc.push_back(tempTTStub);  // The stub is added
             }
           }
@@ -344,10 +349,10 @@ void TTStubBuilder<Ref_Phase2TrackerDigi_>::produce(edm::Event& iEvent, const ed
       this->fill(*ttClusterDSVForOutputAcc, lowerDetid, tempClusLowerAcc);
     if (not tempClusLowerRej.empty())
       this->fill(*ttClusterDSVForOutputRej, lowerDetid, tempClusLowerRej);
-    if (not tempClusUpperAcc.empty())
-      this->fill(*ttClusterDSVForOutputAcc, upperDetid, tempClusUpperAcc);
-    if (not tempClusUpperRej.empty())
-      this->fill(*ttClusterDSVForOutputRej, upperDetid, tempClusUpperRej);
+    //if (not tempClusUpperAcc.empty())
+    //  this->fill(*ttClusterDSVForOutputAcc, upperDetid, tempClusUpperAcc);
+    //if (not tempClusUpperRej.empty())
+    //  this->fill(*ttClusterDSVForOutputRej, upperDetid, tempClusUpperRej);
     if (not tempStubAcc.empty())
       this->fill(*ttStubDSVForOutputAccTemp, stackDetid, tempStubAcc);
     if (not tempStubRej.empty())
