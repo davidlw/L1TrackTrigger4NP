@@ -76,15 +76,29 @@ git cms-addpkg L1Trigger/TrackFindingTracklet
 
 git cms-addpkg L1Trigger/TrackTrigger/
 
+git cms-addpkg L1Trigger/TrackerDTC/
+
+git cms-addpkg SimTracker/TrackTriggerAssociation/
+
 scram b -j4
 
-cp L1TrackTrigger4NP/L1Trigger/TrackFindingTracklet/python/*.py L1Trigger/TrackFindingTracklet/python/
+cp L1TrackTrigger4NP/L1Trigger/TrackFindingTracklet/python/* L1Trigger/TrackFindingTracklet/python/
 
 cp L1TrackTrigger4NP/L1Trigger/TrackFindingTracklet/test/* L1Trigger/TrackFindingTracklet/test/ 
 
+cp L1TrackTrigger4NP/L1Trigger/TrackFindingTracklet/interface/* L1Trigger/TrackFindingTracklet/interface/
+
+cp L1TrackTrigger4NP/L1Trigger/TrackFindingTracklet/plugins/* L1Trigger/TrackFindingTracklet/plugins/
+
+cp L1TrackTrigger4NP/L1Trigger/TrackFindingTracklet/src/* L1Trigger/TrackFindingTracklet/src/
+
 cp L1TrackTrigger4NP/L1Trigger/TrackTrigger/plugins/* L1Trigger/TrackTrigger/plugins
 
-cp L1TrackTrigger4NP/L1Trigger/TrackTrigger/python/*.py L1Trigger/TrackTrigger/python/
+cp L1TrackTrigger4NP/L1Trigger/TrackTrigger/python/* L1Trigger/TrackTrigger/python/
+
+cp L1TrackTrigger4NP/L1Trigger/TrackerDTC/src/* L1Trigger/TrackerDTC/src/
+
+cp L1TrackTrigger4NP/SimTracker/TrackTriggerAssociation/plugins/* SimTracker/TrackTriggerAssociation/plugins/
 
 cmsenv
 
