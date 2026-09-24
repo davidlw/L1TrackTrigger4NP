@@ -27,10 +27,12 @@ L1TrackHitNtupleMaker = cms.EDAnalyzer('L1TrackHitNtupleMaker',
        MCTruthTrackInputTag = cms.InputTag("TTTrackAssociatorFromPixelDigis", "Level1TTTracks"), # MCTruth input
        
        # === UPDATED AND NEW DATA COLLECTIONS ===
-       L1StubInputTag = cms.InputTag("TTStubsFromPhase2TrackerDigis", "StubAccepted"), 
+       L1StubAcceptedInputTag = cms.InputTag("TTStubsFromPhase2TrackerDigis", "StubAccepted"),
+       L1StubRejectedInputTag = cms.InputTag("TTStubsFromPhase2TrackerDigis", "StubRejected"),
+       MCTruthStubAcceptedInputTag = cms.InputTag("TTStubAssociatorFromPixelDigis", "StubAccepted"),
+       MCTruthStubRejectedInputTag = cms.InputTag("TTStubAssociatorFromPixelDigis", "StubRejected"),
        L1ClusterInputTag = cms.InputTag("TTClustersFromPhase2TrackerDigis", "ClusterInclusive"), # ADDED: Default to full raw data inclusive pool for GNN
        MCTruthClusterInputTag = cms.InputTag("TTClusterAssociatorFromPixelDigis", "ClusterAccepted"),
-       MCTruthStubInputTag = cms.InputTag("TTStubAssociatorFromPixelDigis", "StubAccepted"),
        # ========================================
 
        TrackingParticleInputTag = cms.InputTag("mix", "MergedTrackTruth"),

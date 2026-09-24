@@ -74,14 +74,22 @@ cmsenv
 
 git cms-addpkg L1Trigger/TrackFindingTracklet
 
-cp /yourpath/L1TrackTrigger4NP/L1Trigger/TrackFindingTracklet/python/*.py L1Trigger/TrackFindingTracklet/python/
+git cms-addpkg L1Trigger/TrackTrigger/
 
-cp /yourpath/L1TrackTrigger4NP/L1Trigger/TrackFindingTracklet/test/* L1Trigger/TrackFindingTracklet/test/ 
+scram b -j4
+
+cp L1TrackTrigger4NP/L1Trigger/TrackFindingTracklet/python/*.py L1Trigger/TrackFindingTracklet/python/
+
+cp L1TrackTrigger4NP/L1Trigger/TrackFindingTracklet/test/* L1Trigger/TrackFindingTracklet/test/ 
+
+cp L1TrackTrigger4NP/L1Trigger/TrackTrigger/plugins/* L1Trigger/TrackTrigger/plugins
+
+cp L1TrackTrigger4NP/L1Trigger/TrackTrigger/python/*.py L1Trigger/TrackTrigger/python/
 
 cmsenv
 
 scram b -j4
 
-cd /yourpath/L1TrackTrigger4NP/configurations
+cd L1TrackTrigger4NP/configurations
 
 cmsRun rerunL1_trackhitntuple_cfg.py # require DIGI-RAW files as inputs 

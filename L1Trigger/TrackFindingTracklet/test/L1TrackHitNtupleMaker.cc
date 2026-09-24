@@ -125,9 +125,13 @@ private:
   edm::InputTag L1TrackInputTag;       
   edm::InputTag MCTruthTrackInputTag;  
   edm::InputTag MCTruthClusterInputTag;
-  edm::InputTag L1StubInputTag;
+  //edm::InputTag L1StubInputTag;
+  //edm::InputTag MCTruthStubInputTag;
+  edm::InputTag L1StubAcceptedInputTag;
+  edm::InputTag L1StubRejectedInputTag;
+  edm::InputTag MCTruthStubAcceptedInputTag;
+  edm::InputTag MCTruthStubRejectedInputTag;
   edm::InputTag L1ClusterInputTag;     
-  edm::InputTag MCTruthStubInputTag;
   edm::InputTag TrackingParticleInputTag;
   edm::InputTag TrackingVertexInputTag;
   edm::InputTag GenJetInputTag;
@@ -135,9 +139,13 @@ private:
   edm::EDGetTokenT<edmNew::DetSetVector<Phase2TrackerCluster1D>> phase2OTClustersToken_; 
 
   edm::EDGetTokenT<edmNew::DetSetVector<TTCluster<Ref_Phase2TrackerDigi_>>> ttClusterToken_;
-  edm::EDGetTokenT<edmNew::DetSetVector<TTStub<Ref_Phase2TrackerDigi_>>> ttStubToken_;
+  //edm::EDGetTokenT<edmNew::DetSetVector<TTStub<Ref_Phase2TrackerDigi_>>> ttStubToken_;
+  //edm::EDGetTokenT<TTStubAssociationMap<Ref_Phase2TrackerDigi_>> ttStubMCTruthToken_;
+  edm::EDGetTokenT<edmNew::DetSetVector<TTStub<Ref_Phase2TrackerDigi_>>> ttStubAcceptedToken_;
+  edm::EDGetTokenT<edmNew::DetSetVector<TTStub<Ref_Phase2TrackerDigi_>>> ttStubRejectedToken_;
+  edm::EDGetTokenT<TTStubAssociationMap<Ref_Phase2TrackerDigi_>> ttStubMCTruthAcceptedToken_;
+  edm::EDGetTokenT<TTStubAssociationMap<Ref_Phase2TrackerDigi_>> ttStubMCTruthRejectedToken_;
   edm::EDGetTokenT<TTClusterAssociationMap<Ref_Phase2TrackerDigi_>> ttClusterMCTruthToken_;
-  edm::EDGetTokenT<TTStubAssociationMap<Ref_Phase2TrackerDigi_>> ttStubMCTruthToken_;
 
   edm::EDGetTokenT<std::vector<TTTrack<Ref_Phase2TrackerDigi_>>> ttTrackToken_;
   edm::EDGetTokenT<TTTrackAssociationMap<Ref_Phase2TrackerDigi_>> ttTrackMCTruthToken_;
@@ -210,7 +218,6 @@ private:
   std::vector<float>* m_tp_eta;
   std::vector<float>* m_tp_phi;
   std::vector<float>* m_tp_lxy;
-  std::vector<int>* m_tp_ngenpart;  // # of associated GenParticles; 0 => produced by GEANT
   std::vector<float>* m_tp_d0;
   std::vector<float>* m_tp_z0;
   std::vector<float>* m_tp_d0_prod;
@@ -264,9 +271,9 @@ private:
   std::vector<float>* m_allstub_trigBend;
 
   // CLUSTER BRANCHES (Wei Li / Rice)
-  std::vector<float> *cluster_x, *cluster_y, *cluster_z; // Added cluster_z
-  std::vector<int> *cluster_layer, *cluster_isBarrel, *cluster_halfModule, *cluster_isPS, *cluster_chipId, *cluster_sensor;
-  std::vector<uint32_t> *cluster_detid;
+  //std::vector<float> *cluster_x, *cluster_y, *cluster_z; // Added cluster_z
+  //std::vector<int> *cluster_layer, *cluster_isBarrel, *cluster_halfModule, *cluster_isPS, *cluster_chipId, *cluster_sensor;
+  //std::vector<uint32_t> *cluster_detid;
 
   // INCLUSIVE TTCLUSTER BRANCHES
   std::vector<float>* m_ttclus_x;
@@ -285,6 +292,7 @@ private:
   std::vector<float>* m_allstub_matchTP_phi;  
 
   std::vector<int>* m_allstub_genuine;
+  std::vector<int>* m_allstub_isRejected;
 
   // track jet variables
   std::vector<float>* m_jet_eta;
@@ -315,10 +323,12 @@ L1TrackHitNtupleMaker::L1TrackHitNtupleMaker(edm::ParameterSet const& iConfig) :
 
   TrackingInJets = iConfig.getParameter<bool>("TrackingInJets");
 
-  L1StubInputTag = iConfig.getParameter<edm::InputTag>("L1StubInputTag");
+  L1StubAcceptedInputTag = iConfig.getParameter<edm::InputTag>("L1StubAcceptedInputTag");
+  L1StubRejectedInputTag = iConfig.getParameter<edm::InputTag>("L1StubRejectedInputTag");
+  MCTruthStubAcceptedInputTag = iConfig.getParameter<edm::InputTag>("MCTruthStubAcceptedInputTag");
+  MCTruthStubRejectedInputTag = iConfig.getParameter<edm::InputTag>("MCTruthStubRejectedInputTag");
   L1ClusterInputTag = iConfig.getParameter<edm::InputTag>("L1ClusterInputTag"); 
   MCTruthClusterInputTag = iConfig.getParameter<edm::InputTag>("MCTruthClusterInputTag");
-  MCTruthStubInputTag = iConfig.getParameter<edm::InputTag>("MCTruthStubInputTag");
   TrackingParticleInputTag = iConfig.getParameter<edm::InputTag>("TrackingParticleInputTag");
   TrackingVertexInputTag = iConfig.getParameter<edm::InputTag>("TrackingVertexInputTag");
   GenJetInputTag = iConfig.getParameter<edm::InputTag>("GenJetInputTag");
@@ -327,10 +337,12 @@ L1TrackHitNtupleMaker::L1TrackHitNtupleMaker(edm::ParameterSet const& iConfig) :
 
   ttTrackToken_ = consumes<std::vector<TTTrack<Ref_Phase2TrackerDigi_>>>(L1TrackInputTag);
   ttTrackMCTruthToken_ = consumes<TTTrackAssociationMap<Ref_Phase2TrackerDigi_>>(MCTruthTrackInputTag);
-  ttStubToken_ = consumes<edmNew::DetSetVector<TTStub<Ref_Phase2TrackerDigi_>>>(L1StubInputTag);
-  ttClusterToken_ = consumes<edmNew::DetSetVector<TTCluster<Ref_Phase2TrackerDigi_>>>(L1ClusterInputTag);
   ttClusterMCTruthToken_ = consumes<TTClusterAssociationMap<Ref_Phase2TrackerDigi_>>(MCTruthClusterInputTag);
-  ttStubMCTruthToken_ = consumes<TTStubAssociationMap<Ref_Phase2TrackerDigi_>>(MCTruthStubInputTag);
+  ttStubAcceptedToken_ = consumes<edmNew::DetSetVector<TTStub<Ref_Phase2TrackerDigi_>>>(L1StubAcceptedInputTag);
+  ttStubRejectedToken_ = consumes<edmNew::DetSetVector<TTStub<Ref_Phase2TrackerDigi_>>>(L1StubRejectedInputTag);
+  ttStubMCTruthAcceptedToken_ = consumes<TTStubAssociationMap<Ref_Phase2TrackerDigi_>>(MCTruthStubAcceptedInputTag);
+  ttStubMCTruthRejectedToken_ = consumes<TTStubAssociationMap<Ref_Phase2TrackerDigi_>>(MCTruthStubRejectedInputTag);
+  ttClusterToken_ = consumes<edmNew::DetSetVector<TTCluster<Ref_Phase2TrackerDigi_>>>(L1ClusterInputTag);
 
   TrackingParticleToken_ = consumes<std::vector<TrackingParticle>>(TrackingParticleInputTag);
   TrackingVertexToken_ = consumes<std::vector<TrackingVertex>>(TrackingVertexInputTag);
@@ -403,7 +415,6 @@ void L1TrackHitNtupleMaker::endJob() {
   delete m_tp_eta;
   delete m_tp_phi;
   delete m_tp_lxy;
-  delete m_tp_ngenpart;
   delete m_tp_d0;
   delete m_tp_z0;
   delete m_tp_d0_prod;
@@ -456,6 +467,7 @@ void L1TrackHitNtupleMaker::endJob() {
   delete m_allstub_matchTP_eta;
   delete m_allstub_matchTP_phi;
   delete m_allstub_genuine;
+  delete m_allstub_isRejected;
 
   delete cluster_x;
   delete cluster_y;
@@ -545,7 +557,6 @@ void L1TrackHitNtupleMaker::beginJob() {
   m_tp_eta = new std::vector<float>;
   m_tp_phi = new std::vector<float>;
   m_tp_lxy = new std::vector<float>;
-  m_tp_ngenpart = new std::vector<int>;
   m_tp_d0 = new std::vector<float>;
   m_tp_z0 = new std::vector<float>;
   m_tp_d0_prod = new std::vector<float>;
@@ -598,11 +609,18 @@ void L1TrackHitNtupleMaker::beginJob() {
   m_allstub_matchTP_eta = new std::vector<float>;
   m_allstub_matchTP_phi = new std::vector<float>;
   m_allstub_genuine = new std::vector<int>;
+  m_allstub_isRejected = new std::vector<int>;
 
-  cluster_x = new std::vector<float>; cluster_y = new std::vector<float>; cluster_z = new std::vector<float>; // Initialize cluster_z
-  cluster_layer = new std::vector<int>; cluster_isBarrel = new std::vector<int>;
-  cluster_halfModule = new std::vector<int>; cluster_detid = new std::vector<uint32_t>;
-  cluster_isPS = new std::vector<int>; cluster_chipId = new std::vector<int>; cluster_sensor = new std::vector<int>;
+  cluster_x = new std::vector<float>;
+  cluster_y = new std::vector<float>;
+  cluster_z = new std::vector<float>;// Initialize cluster_z
+  cluster_layer = new std::vector<int>;
+  cluster_isBarrel = new std::vector<int>;
+  cluster_halfModule = new std::vector<int>;
+  cluster_detid = new std::vector<uint32_t>;
+  cluster_isPS = new std::vector<int>;
+  cluster_chipId = new std::vector<int>;
+  cluster_sensor = new std::vector<int>;
 
   m_ttclus_x        = new std::vector<float>;
   m_ttclus_y        = new std::vector<float>;
@@ -677,14 +695,6 @@ void L1TrackHitNtupleMaker::beginJob() {
   eventTree->Branch("tp_eta", &m_tp_eta);
   eventTree->Branch("tp_phi", &m_tp_phi);
   eventTree->Branch("tp_lxy", &m_tp_lxy);
-  // Number of GenParticles associated to the TrackingParticle.
-  //   > 0  -> the particle came from the event generator
-  //   == 0 -> it was created by GEANT during detector simulation (decay in flight,
-  //           conversion, nuclear interaction, delta ray, ...)
-  // Select generator particles with tp_ngenpart > 0. This uses only the size of the
-  // RefVector, so it does not dereference the GenParticle collection and is safe even
-  // if that collection was dropped from the input file (unlike TrackingParticle::status()).
-  eventTree->Branch("tp_ngenpart", &m_tp_ngenpart);
   eventTree->Branch("tp_d0", &m_tp_d0);
   eventTree->Branch("tp_z0", &m_tp_z0);
   eventTree->Branch("tp_d0_prod", &m_tp_d0_prod);
@@ -742,12 +752,18 @@ void L1TrackHitNtupleMaker::beginJob() {
     eventTree->Branch("allstub_matchTP_eta", &m_allstub_matchTP_eta);
     eventTree->Branch("allstub_matchTP_phi", &m_allstub_matchTP_phi);
     eventTree->Branch("allstub_genuine", &m_allstub_genuine);
+    eventTree->Branch("allstub_isRejected", &m_allstub_isRejected);
 
     // Book Wei offline branches (with cluster_z included)
-    eventTree->Branch("cluster_x", &cluster_x); eventTree->Branch("cluster_y", &cluster_y); eventTree->Branch("cluster_z", &cluster_z);
-    eventTree->Branch("cluster_layer", &cluster_layer); eventTree->Branch("cluster_isBarrel", &cluster_isBarrel);
-    eventTree->Branch("cluster_halfModule", &cluster_halfModule); eventTree->Branch("cluster_detid", &cluster_detid);
-    eventTree->Branch("cluster_isPS", &cluster_isPS); eventTree->Branch("cluster_chipId", &cluster_chipId);
+    eventTree->Branch("cluster_x", &cluster_x);
+    eventTree->Branch("cluster_y", &cluster_y);
+    eventTree->Branch("cluster_z", &cluster_z);
+    eventTree->Branch("cluster_layer", &cluster_layer);
+    eventTree->Branch("cluster_isBarrel", &cluster_isBarrel);
+    eventTree->Branch("cluster_halfModule", &cluster_halfModule);
+    eventTree->Branch("cluster_detid", &cluster_detid);
+    eventTree->Branch("cluster_isPS", &cluster_isPS);
+    eventTree->Branch("cluster_chipId", &cluster_chipId);
     eventTree->Branch("cluster_sensor", &cluster_sensor);
 
     eventTree->Branch("ttclus_x", &m_ttclus_x);
@@ -787,63 +803,156 @@ void L1TrackHitNtupleMaker::analyze(const edm::Event& iEvent, const edm::EventSe
   }
 
   if (SaveAllTracks) {
-    m_trk_pt->clear(); m_trk_eta->clear(); m_trk_phi->clear(); m_trk_d0->clear(); m_trk_z0->clear();
-    m_trk_chi2->clear(); m_trk_chi2_dof->clear(); m_trk_chi2rphi->clear(); m_trk_chi2rphi_dof->clear();
-    m_trk_chi2rz->clear(); m_trk_chi2rz_dof->clear(); m_trk_bendchi2->clear(); m_trk_nstub->clear();
-    m_trk_lhits->clear(); m_trk_dhits->clear(); m_trk_seed->clear(); m_trk_hitpattern->clear();
-    m_trk_lhits_hitpattern->clear(); m_trk_dhits_hitpattern->clear(); m_trk_nPSstub_hitpattern->clear();
-    m_trk_n2Sstub_hitpattern->clear(); m_trk_nLostPSstub_hitpattern->clear(); m_trk_nLost2Sstub_hitpattern->clear();
-    m_trk_nLoststub_V1_hitpattern->clear(); m_trk_nLoststub_V2_hitpattern->clear(); m_trk_charge->clear();
-    m_trk_phiSector->clear(); m_trk_etaSector->clear(); m_trk_genuine->clear(); m_trk_loose->clear();
-    m_trk_unknown->clear(); m_trk_combinatoric->clear(); m_trk_fake->clear(); m_trk_MVA1->clear();
-    m_trk_matchtp_pdgid->clear(); m_trk_matchtp_pt->clear(); m_trk_matchtp_eta->clear();
-    m_trk_matchtp_phi->clear(); m_trk_matchtp_z0->clear(); m_trk_matchtp_lxy->clear();
-    m_trk_matchtp_d0->clear(); m_trk_injet->clear(); m_trk_injet_highpt->clear();
-    m_trk_injet_vhighpt->clear(); m_trk_layers->clear();
+    m_trk_pt->clear();
+    m_trk_eta->clear();
+    m_trk_phi->clear();
+    m_trk_d0->clear();
+    m_trk_z0->clear();
+    m_trk_chi2->clear();
+    m_trk_chi2_dof->clear();
+    m_trk_chi2rphi->clear();
+    m_trk_chi2rphi_dof->clear();
+    m_trk_chi2rz->clear();
+    m_trk_chi2rz_dof->clear();
+    m_trk_bendchi2->clear();
+    m_trk_nstub->clear();
+    m_trk_lhits->clear();
+    m_trk_dhits->clear();
+    m_trk_seed->clear();
+    m_trk_hitpattern->clear();
+    m_trk_lhits_hitpattern->clear();
+    m_trk_dhits_hitpattern->clear();
+    m_trk_nPSstub_hitpattern->clear();
+    m_trk_n2Sstub_hitpattern->clear();
+    m_trk_nLostPSstub_hitpattern->clear();
+    m_trk_nLost2Sstub_hitpattern->clear();
+    m_trk_nLoststub_V1_hitpattern->clear();
+    m_trk_nLoststub_V2_hitpattern->clear();
+    m_trk_charge->clear();
+    m_trk_phiSector->clear();
+    m_trk_etaSector->clear();
+    m_trk_genuine->clear();
+    m_trk_loose->clear();
+    m_trk_unknown->clear();
+    m_trk_combinatoric->clear();
+    m_trk_fake->clear();
+    m_trk_MVA1->clear();
+    m_trk_matchtp_pdgid->clear();
+    m_trk_matchtp_pt->clear();
+    m_trk_matchtp_eta->clear();
+    m_trk_matchtp_phi->clear();
+    m_trk_matchtp_z0->clear();
+    m_trk_matchtp_lxy->clear();
+    m_trk_matchtp_d0->clear();
+    m_trk_injet->clear();
+    m_trk_injet_highpt->clear();
+    m_trk_injet_vhighpt->clear();
+    m_trk_layers->clear();
   }
 
-  m_tp_pt->clear(); m_tp_eta->clear(); m_tp_phi->clear(); m_tp_lxy->clear(); m_tp_ngenpart->clear(); m_tp_d0->clear(); m_tp_z0->clear();
-  m_tp_d0_prod->clear(); m_tp_z0_prod->clear(); m_tp_pdgid->clear(); m_tp_nmatch->clear(); m_tp_nstub->clear();
-  m_tp_eventid->clear(); m_tp_charge->clear(); m_tp_injet->clear(); m_tp_injet_highpt->clear(); m_tp_injet_vhighpt->clear();
+  m_tp_pt->clear();
+  m_tp_eta->clear();
+  m_tp_phi->clear();
+  m_tp_lxy->clear();
+  m_tp_d0->clear();
+  m_tp_z0->clear();
+  m_tp_d0_prod->clear();
+  m_tp_z0_prod->clear();
+  m_tp_pdgid->clear();
+  m_tp_nmatch->clear();
+  m_tp_nstub->clear();
+  m_tp_eventid->clear();
+  m_tp_charge->clear();
+  m_tp_injet->clear();
+  m_tp_injet_highpt->clear();
+  m_tp_injet_vhighpt->clear();
 
-  m_matchtrk_pt->clear(); m_matchtrk_eta->clear(); m_matchtrk_phi->clear(); m_matchtrk_z0->clear();
-  m_matchtrk_d0->clear(); m_matchtrk_chi2->clear(); m_matchtrk_chi2_dof->clear(); m_matchtrk_chi2rphi->clear();
-  m_matchtrk_chi2rphi_dof->clear(); m_matchtrk_chi2rz->clear(); m_matchtrk_chi2rz_dof->clear();
-  m_matchtrk_bendchi2->clear(); m_matchtrk_MVA1->clear(); m_matchtrk_nstub->clear(); m_matchtrk_lhits->clear();
-  m_matchtrk_dhits->clear(); m_matchtrk_seed->clear(); m_matchtrk_hitpattern->clear(); m_matchtrk_charge->clear();
-  m_matchtrk_injet->clear(); m_matchtrk_injet_highpt->clear(); m_matchtrk_injet_vhighpt->clear();
+  m_matchtrk_pt->clear();
+  m_matchtrk_eta->clear(); 
+  m_matchtrk_phi->clear();
+  m_matchtrk_z0->clear();
+  m_matchtrk_d0->clear();
+  m_matchtrk_chi2->clear();
+  m_matchtrk_chi2_dof->clear();
+  m_matchtrk_chi2rphi->clear();
+  m_matchtrk_chi2rphi_dof->clear();
+  m_matchtrk_chi2rz->clear();
+  m_matchtrk_chi2rz_dof->clear();
+  m_matchtrk_bendchi2->clear();
+  m_matchtrk_MVA1->clear();
+  m_matchtrk_nstub->clear();
+  m_matchtrk_lhits->clear();
+  m_matchtrk_dhits->clear();
+  m_matchtrk_seed->clear();
+  m_matchtrk_hitpattern->clear();
+  m_matchtrk_charge->clear();
+  m_matchtrk_injet->clear();
+  m_matchtrk_injet_highpt->clear();
+  m_matchtrk_injet_vhighpt->clear();
 
   if (SaveStubs) {
-    m_allstub_x->clear(); m_allstub_y->clear(); m_allstub_z->clear();
-    m_allstub_isBarrel->clear(); m_allstub_layer->clear(); m_allstub_isPSmodule->clear(); m_allstub_isTiltedBarrel->clear();
-    m_allstub_trigDisplace->clear(); m_allstub_trigOffset->clear(); m_allstub_trigPos->clear(); m_allstub_trigBend->clear();
-    m_allstub_matchTP_pdgid->clear(); m_allstub_matchTP_pt->clear(); m_allstub_matchTP_eta->clear(); m_allstub_matchTP_phi->clear();
+    m_allstub_x->clear();
+    m_allstub_y->clear();
+    m_allstub_z->clear();
+    m_allstub_isBarrel->clear();
+    m_allstub_layer->clear();
+    m_allstub_isPSmodule->clear();
+    m_allstub_isTiltedBarrel->clear();
+    m_allstub_trigDisplace->clear();
+    m_allstub_trigOffset->clear();
+    m_allstub_trigPos->clear();
+    m_allstub_trigBend->clear();
+    m_allstub_matchTP_pdgid->clear();
+    m_allstub_matchTP_pt->clear();
+    m_allstub_matchTP_eta->clear();
+    m_allstub_matchTP_phi->clear();
     m_allstub_genuine->clear();
+    m_allstub_isRejected->clear();
 
-    cluster_x->clear(); cluster_y->clear(); cluster_z->clear(); // Clear cluster_z
-    cluster_layer->clear(); cluster_isBarrel->clear();
-    cluster_halfModule->clear(); cluster_detid->clear(); cluster_isPS->clear(); cluster_chipId->clear();
+    cluster_x->clear();
+    cluster_y->clear();
+    cluster_z->clear(); // Clear cluster_z
+    cluster_layer->clear();
+    cluster_isBarrel->clear();
+    cluster_halfModule->clear();
+    cluster_detid->clear();
+    cluster_isPS->clear();
+    cluster_chipId->clear();
     cluster_sensor->clear();
 
-    m_ttclus_x->clear(); m_ttclus_y->clear(); m_ttclus_z->clear();
-    m_ttclus_layer->clear(); m_ttclus_isBarrel->clear(); m_ttclus_isPS->clear();
-    m_ttclus_width->clear(); m_ttclus_sensor->clear();
+    m_ttclus_x->clear();
+    m_ttclus_y->clear();
+    m_ttclus_z->clear();
+    m_ttclus_layer->clear();
+    m_ttclus_isBarrel->clear();
+    m_ttclus_isPS->clear();
+    m_ttclus_width->clear();
+    m_ttclus_sensor->clear();
   }
 
-  m_jet_eta->clear(); m_jet_phi->clear(); m_jet_pt->clear();
-  m_jet_tp_sumpt->clear(); m_jet_trk_sumpt->clear(); m_jet_matchtrk_sumpt->clear();
+  m_jet_eta->clear();
+  m_jet_phi->clear();
+  m_jet_pt->clear();
+  m_jet_tp_sumpt->clear();
+  m_jet_trk_sumpt->clear();
+  m_jet_matchtrk_sumpt->clear();
 
   edm::Handle<std::vector<TTTrack<Ref_Phase2TrackerDigi_>>> TTTrackHandle;
   iEvent.getByToken(ttTrackToken_, TTTrackHandle);
 
-  edm::Handle<edmNew::DetSetVector<TTStub<Ref_Phase2TrackerDigi_>>> TTStubHandle;
-  if (SaveStubs)
-    iEvent.getByToken(ttStubToken_, TTStubHandle);
+  edm::Handle<edmNew::DetSetVector<TTStub<Ref_Phase2TrackerDigi_>>> TTStubAcceptedHandle;
+  edm::Handle<edmNew::DetSetVector<TTStub<Ref_Phase2TrackerDigi_>>> TTStubRejectedHandle;
+  if (SaveStubs) {
+    iEvent.getByToken(ttStubAcceptedToken_, TTStubAcceptedHandle);
+    iEvent.getByToken(ttStubRejectedToken_, TTStubRejectedHandle);
+  }
 
   edm::Handle<TTClusterAssociationMap<Ref_Phase2TrackerDigi_>> MCTruthTTClusterHandle;
   iEvent.getByToken(ttClusterMCTruthToken_, MCTruthTTClusterHandle);
-  edm::Handle<TTStubAssociationMap<Ref_Phase2TrackerDigi_>> MCTruthTTStubHandle;
-  iEvent.getByToken(ttStubMCTruthToken_, MCTruthTTStubHandle);
+  edm::Handle<TTStubAssociationMap<Ref_Phase2TrackerDigi_>> MCTruthTTStubAcceptedHandle;
+  iEvent.getByToken(ttStubMCTruthAcceptedToken_, MCTruthTTStubAcceptedHandle);
+  edm::Handle<TTStubAssociationMap<Ref_Phase2TrackerDigi_>> MCTruthTTStubRejectedHandle;
+  iEvent.getByToken(ttStubMCTruthRejectedToken_, MCTruthTTStubRejectedHandle);
   edm::Handle<TTTrackAssociationMap<Ref_Phase2TrackerDigi_>> MCTruthTTTrackHandle;
   iEvent.getByToken(ttTrackMCTruthToken_, MCTruthTTTrackHandle);
 
@@ -868,62 +977,129 @@ void L1TrackHitNtupleMaker::analyze(const edm::Event& iEvent, const edm::EventSe
   // loop over L1 stubs
   // ----------------------------------------------------------------------------------------------
   if (SaveStubs) {
-    for (auto gd = theTrackerGeom->dets().begin(); gd != theTrackerGeom->dets().end(); gd++) {
-      DetId detid = (*gd)->geographicalId();
-      if (detid.subdetId() != StripSubdetector::TOB && detid.subdetId() != StripSubdetector::TID)
-        continue;
-      if (!tTopo->isLower(detid))
-        continue;              
-      DetId stackDetid = tTopo->stack(detid);  
+    // Create a vector of pairs to loop over both collections, where second value is the 'isRejected' flag
+    std::vector<std::pair<edm::Handle<edmNew::DetSetVector<TTStub<Ref_Phase2TrackerDigi_>>>, int>> stubHandles = {
+      {TTStubAcceptedHandle, 0}, 
+      {TTStubRejectedHandle, 1}
+    };
 
-      if (TTStubHandle->find(stackDetid) == TTStubHandle->end())
-        continue;
+    for (const auto& handlePair : stubHandles) {
+      const auto& TTStubHandle = handlePair.first;
+      int isRejected = handlePair.second;
+      
+      if (!TTStubHandle.isValid()) continue;
 
-      edmNew::DetSet<TTStub<Ref_Phase2TrackerDigi_>> stubs = (*TTStubHandle)[stackDetid];
-      const GeomDetUnit* det0 = theTrackerGeom->idToDetUnit(detid);
-      const auto* theGeomDet = dynamic_cast<const PixelGeomDetUnit*>(det0);
-      const PixelTopology* topol = dynamic_cast<const PixelTopology*>(&(theGeomDet->specificTopology()));
+      for (auto gd = theTrackerGeom->dets().begin(); gd != theTrackerGeom->dets().end(); gd++) {
+        DetId detid = (*gd)->geographicalId();
+        if (detid.subdetId() != StripSubdetector::TOB && detid.subdetId() != StripSubdetector::TID)
+          continue;
+        if (!tTopo->isLower(detid))
+          continue;                              // loop on the stacks: choose the lower arbitrarily
+        DetId stackDetid = tTopo->stack(detid);  // Stub module detid
 
-      for (auto stubIter = stubs.begin(); stubIter != stubs.end(); ++stubIter) {
-        edm::Ref<edmNew::DetSetVector<TTStub<Ref_Phase2TrackerDigi_>>, TTStub<Ref_Phase2TrackerDigi_>> tempStubPtr =
-            edmNew::makeRefTo(TTStubHandle, stubIter);
+        if (TTStubHandle->find(stackDetid) == TTStubHandle->end())
+          continue;
+        // Get the DetSets of the Clusters
+        edmNew::DetSet<TTStub<Ref_Phase2TrackerDigi_>> stubs = (*TTStubHandle)[stackDetid];
+        const GeomDetUnit* det0 = theTrackerGeom->idToDetUnit(detid);
+        const auto* theGeomDet = dynamic_cast<const PixelGeomDetUnit*>(det0);
+        const PixelTopology* topol = dynamic_cast<const PixelTopology*>(&(theGeomDet->specificTopology()));
 
-        int isBarrel = 0; int layer = -1;
-        if (detid.subdetId() == StripSubdetector::TOB) {
-          isBarrel = 1; layer = static_cast<int>(tTopo->layer(detid));
-        } else if (detid.subdetId() == StripSubdetector::TID) {
-          isBarrel = 0; layer = static_cast<int>(tTopo->layer(detid));
-        }
+        // loop over stubs
+        for (auto stubIter = stubs.begin(); stubIter != stubs.end(); ++stubIter) {
+          edm::Ref<edmNew::DetSetVector<TTStub<Ref_Phase2TrackerDigi_>>, TTStub<Ref_Phase2TrackerDigi_>> tempStubPtr =
+              edmNew::makeRefTo(TTStubHandle, stubIter);
 
-        int isPSmodule = (topol->nrows() == 960) ? 1 : 0;
-        const unsigned int tobSide = tTopo->tobSide(detid);  
-        int isTiltedBarrel = (isBarrel == 1 && (tobSide == 1 || tobSide == 2)) ? 1 : 0;
-
-        MeasurementPoint coords = tempStubPtr->clusterRef(0)->findAverageLocalCoordinatesCentered();
-        LocalPoint clustlp = topol->localPosition(coords);
-        GlobalPoint posStub = theGeomDet->surface().toGlobal(clustlp);
-
-        m_allstub_x->push_back(posStub.x()); m_allstub_y->push_back(posStub.y()); m_allstub_z->push_back(posStub.z());
-        m_allstub_isBarrel->push_back(isBarrel); m_allstub_layer->push_back(layer);
-        m_allstub_isPSmodule->push_back(isPSmodule); m_allstub_isTiltedBarrel->push_back(isTiltedBarrel);
-        m_allstub_trigDisplace->push_back(tempStubPtr->rawBend()); m_allstub_trigOffset->push_back(tempStubPtr->bendOffset());
-        m_allstub_trigPos->push_back(tempStubPtr->innerClusterPosition()); m_allstub_trigBend->push_back(tempStubPtr->bendFE());
-
-        edm::Ptr<TrackingParticle> my_tp = MCTruthTTStubHandle->findTrackingParticlePtr(tempStubPtr);
-        int myTP_pdgid = -999; float myTP_pt = -999; float myTP_eta = -999; float myTP_phi = -999;
-
-        if (!my_tp.isNull()) {
-          if (my_tp->eventId().event() == 0) {
-            myTP_pdgid = my_tp->pdgId(); myTP_pt = my_tp->p4().pt();
-            myTP_eta = my_tp->p4().eta(); myTP_phi = my_tp->p4().phi();
+          int isBarrel = 0;
+          int layer = -999999;
+          if (detid.subdetId() == StripSubdetector::TOB) {
+            isBarrel = 1;
+            layer = static_cast<int>(tTopo->layer(detid));
+          } else if (detid.subdetId() == StripSubdetector::TID) {
+            isBarrel = 0;
+            layer = static_cast<int>(tTopo->layer(detid));
+          } else {
+            edm::LogVerbatim("Tracklet") << "WARNING -- neither TOB or TID stub, shouldn't happen...";
+            layer = -1;
           }
+
+          int isPSmodule = 0;
+          if (topol->nrows() == 960)
+            isPSmodule = 1;
+
+          const unsigned int tobSide = tTopo->tobSide(detid);  // nonBarrel = 0, tiltedMinus = 1, tiltedPlus = 2, flat = 3
+          int isTiltedBarrel = 0;
+          if (isBarrel == 1 && (tobSide == 1 || tobSide == 2))
+            isTiltedBarrel = 1;
+
+          MeasurementPoint coords = tempStubPtr->clusterRef(0)->findAverageLocalCoordinatesCentered();
+          LocalPoint clustlp = topol->localPosition(coords);
+          GlobalPoint posStub = theGeomDet->surface().toGlobal(clustlp);
+
+          double tmp_stub_x = posStub.x();
+          double tmp_stub_y = posStub.y();
+          double tmp_stub_z = posStub.z();
+
+          float trigDisplace = tempStubPtr->rawBend();
+          float trigOffset = tempStubPtr->bendOffset();
+          float trigPos = tempStubPtr->innerClusterPosition();
+          float trigBend = tempStubPtr->bendFE();
+
+          m_allstub_x->push_back(tmp_stub_x);
+          m_allstub_y->push_back(tmp_stub_y);
+          m_allstub_z->push_back(tmp_stub_z);
+
+          m_allstub_isBarrel->push_back(isBarrel);
+          m_allstub_layer->push_back(layer);
+          m_allstub_isPSmodule->push_back(isPSmodule);
+          m_allstub_isTiltedBarrel->push_back(isTiltedBarrel);
+
+          m_allstub_trigDisplace->push_back(trigDisplace);
+          m_allstub_trigOffset->push_back(trigOffset);
+          m_allstub_trigPos->push_back(trigPos);
+          m_allstub_trigBend->push_back(trigBend);
+
+          // matched to tracking particle?
+          edm::Ptr<TrackingParticle> my_tp;
+	  if( isRejected == 1 )
+            my_tp = MCTruthTTStubRejectedHandle->findTrackingParticlePtr(tempStubPtr);
+	  else
+            my_tp = MCTruthTTStubAcceptedHandle->findTrackingParticlePtr(tempStubPtr);
+
+          int myTP_pdgid = -999;
+          float myTP_pt = -999;
+          float myTP_eta = -999;
+          float myTP_phi = -999;
+
+          if (my_tp.isNull() == false) {
+            int tmp_eventid = my_tp->eventId().event();
+
+            if (tmp_eventid > 0)
+              continue;  // this means stub from pileup track
+
+            myTP_pdgid = my_tp->pdgId();
+            myTP_pt = my_tp->p4().pt();
+            myTP_eta = my_tp->p4().eta();
+            myTP_phi = my_tp->p4().phi();
+          }
+
+          m_allstub_matchTP_pdgid->push_back(myTP_pdgid);
+          m_allstub_matchTP_pt->push_back(myTP_pt);
+          m_allstub_matchTP_eta->push_back(myTP_eta);
+          m_allstub_matchTP_phi->push_back(myTP_phi);
+
+          int tmp_stub_genuine = 0;
+          if( (isRejected == 0 && MCTruthTTStubAcceptedHandle->isGenuine(tempStubPtr)) 
+                || (isRejected == 1 && MCTruthTTStubRejectedHandle->isGenuine(tempStubPtr)) )
+            tmp_stub_genuine = 1;
+
+          m_allstub_genuine->push_back(tmp_stub_genuine);
+	  m_allstub_isRejected->push_back(isRejected);
         }
-        m_allstub_matchTP_pdgid->push_back(myTP_pdgid); m_allstub_matchTP_pt->push_back(myTP_pt);
-        m_allstub_matchTP_eta->push_back(myTP_eta); m_allstub_matchTP_phi->push_back(myTP_phi);
-        m_allstub_genuine->push_back(MCTruthTTStubHandle->isGenuine(tempStubPtr) ? 1 : 0);
       }
     }
-  }
+
+  }//end save stubs
 
   // -----------------------------------------------------------------------------------------------
   // Wei Li Offline Clusters
@@ -954,10 +1130,15 @@ void L1TrackHitNtupleMaker::analyze(const edm::Event& iEvent, const edm::EventSe
         MeasurementPoint mp(center, 0.5);
         GlobalPoint gp = theGeomDet->surface().toGlobal(theGeomDet->topology().localPosition(mp));
 
-        cluster_x->push_back(gp.x()); cluster_y->push_back(gp.y()); cluster_z->push_back(gp.z()); // Added cluster_z extraction
-        cluster_layer->push_back(layer); cluster_isBarrel->push_back(isBarrel ? 1 : 0);
-        cluster_halfModule->push_back(halfMod); cluster_detid->push_back(detId.rawId());
-        cluster_isPS->push_back(isPS); cluster_chipId->push_back(chipIdx);
+        cluster_x->push_back(gp.x());
+        cluster_y->push_back(gp.y());
+        cluster_z->push_back(gp.z());// Added cluster_z extraction
+        cluster_layer->push_back(layer);
+        cluster_isBarrel->push_back(isBarrel ? 1 : 0);
+        cluster_halfModule->push_back(halfMod);
+        cluster_detid->push_back(detId.rawId());
+        cluster_isPS->push_back(isPS);
+        cluster_chipId->push_back(chipIdx);
         cluster_sensor->push_back(isUpper ? 1 : 0);
       }
     }
@@ -1022,7 +1203,9 @@ void L1TrackHitNtupleMaker::analyze(const edm::Event& iEvent, const edm::EventSe
   }
 
   const int NJETS = 10;
-  float jets_tp_sumpt[NJETS] = {0}; float jets_matchtrk_sumpt[NJETS] = {0}; float jets_trk_sumpt[NJETS] = {0};
+  float jets_tp_sumpt[NJETS] = {0};
+  float jets_matchtrk_sumpt[NJETS] = {0};
+  float jets_trk_sumpt[NJETS] = {0};
 
   // ----------------------------------------------------------------------------------------------
   // loop over L1 tracks
@@ -1064,18 +1247,32 @@ void L1TrackHitNtupleMaker::analyze(const edm::Event& iEvent, const edm::EventSe
         else if (detIdStub.subdetId() == StripSubdetector::TID) tmp_trk_dhits += pow(10, layer - 1);
       }
 
-      m_trk_pt->push_back(tmp_trk_pt); m_trk_eta->push_back(tmp_trk_eta); m_trk_phi->push_back(tmp_trk_phi);
-      m_trk_z0->push_back(tmp_trk_z0); m_trk_d0->push_back(tmp_trk_d0); m_trk_chi2->push_back(iterL1Track->chi2());
+      m_trk_pt->push_back(tmp_trk_pt);
+      m_trk_eta->push_back(tmp_trk_eta);
+      m_trk_phi->push_back(tmp_trk_phi);
+      m_trk_z0->push_back(tmp_trk_z0);
+      m_trk_d0->push_back(tmp_trk_d0);
+      m_trk_chi2->push_back(iterL1Track->chi2());
       m_trk_chi2_dof->push_back(iterL1Track->chi2() / (2 * tmp_trk_nstub - L1Tk_nPar));
-      m_trk_chi2rphi->push_back(iterL1Track->chi2XY()); m_trk_chi2rz->push_back(iterL1Track->chi2Z());
-      m_trk_bendchi2->push_back(iterL1Track->stubPtConsistency()); m_trk_MVA1->push_back(iterL1Track->trkMVA1());
-      m_trk_nstub->push_back(tmp_trk_nstub); m_trk_dhits->push_back(tmp_trk_dhits); m_trk_lhits->push_back(tmp_trk_lhits);
-      m_trk_seed->push_back((int)iterL1Track->trackSeedType()); m_trk_hitpattern->push_back(tmp_trk_hitpattern);
-      m_trk_lhits_hitpattern->push_back(tmp_trk_lhits_hitpattern); m_trk_dhits_hitpattern->push_back(tmp_trk_dhits_hitpattern);
-      m_trk_nPSstub_hitpattern->push_back(hph.numPS()); m_trk_n2Sstub_hitpattern->push_back(hph.num2S());
-      m_trk_nLostPSstub_hitpattern->push_back(hph.numMissingPS()); m_trk_nLost2Sstub_hitpattern->push_back(hph.numMissing2S());
-      m_trk_nLoststub_V1_hitpattern->push_back(hph.numMissingInterior1()); m_trk_nLoststub_V2_hitpattern->push_back(hph.numMissingInterior2());
-      m_trk_charge->push_back(tmp_trk_charge); m_trk_phiSector->push_back(iterL1Track->phiSector());
+      m_trk_chi2rphi->push_back(iterL1Track->chi2XY());
+      m_trk_chi2rz->push_back(iterL1Track->chi2Z());
+      m_trk_bendchi2->push_back(iterL1Track->stubPtConsistency());
+      m_trk_MVA1->push_back(iterL1Track->trkMVA1());
+      m_trk_nstub->push_back(tmp_trk_nstub);
+      m_trk_dhits->push_back(tmp_trk_dhits);
+      m_trk_lhits->push_back(tmp_trk_lhits);
+      m_trk_seed->push_back((int)iterL1Track->trackSeedType());
+      m_trk_hitpattern->push_back(tmp_trk_hitpattern);
+      m_trk_lhits_hitpattern->push_back(tmp_trk_lhits_hitpattern);
+      m_trk_dhits_hitpattern->push_back(tmp_trk_dhits_hitpattern);
+      m_trk_nPSstub_hitpattern->push_back(hph.numPS());
+      m_trk_n2Sstub_hitpattern->push_back(hph.num2S());
+      m_trk_nLostPSstub_hitpattern->push_back(hph.numMissingPS());
+      m_trk_nLost2Sstub_hitpattern->push_back(hph.numMissing2S());
+      m_trk_nLoststub_V1_hitpattern->push_back(hph.numMissingInterior1());
+      m_trk_nLoststub_V2_hitpattern->push_back(hph.numMissingInterior2());
+      m_trk_charge->push_back(tmp_trk_charge);
+      m_trk_phiSector->push_back(iterL1Track->phiSector());
       m_trk_etaSector->push_back(hph.etaSector());
       m_trk_genuine->push_back(MCTruthTTTrackHandle->isGenuine(l1track_ptr) ? 1 : 0);
       m_trk_loose->push_back(MCTruthTTTrackHandle->isLooselyGenuine(l1track_ptr) ? 1 : 0);
@@ -1086,17 +1283,26 @@ void L1TrackHitNtupleMaker::analyze(const edm::Event& iEvent, const edm::EventSe
       int myFake = my_tp.isNull() ? 0 : ((my_tp->eventId().event() > 0) ? 2 : 1);
       m_trk_fake->push_back(myFake);
 
-      float tmp_matchtp_pt = -999; float tmp_matchtp_eta = -999; float tmp_matchtp_phi = -999;
+      float tmp_matchtp_pt = -999;
+      float tmp_matchtp_eta = -999;
+      float tmp_matchtp_phi = -999;
       if (!my_tp.isNull() && my_tp->eventId().event() == 0) {
-        tmp_matchtp_pt = my_tp->pt(); tmp_matchtp_eta = my_tp->eta(); tmp_matchtp_phi = my_tp->phi();
+        tmp_matchtp_pt = my_tp->pt();
+        tmp_matchtp_eta = my_tp->eta();
+        tmp_matchtp_phi = my_tp->phi();
       }
       m_trk_matchtp_pdgid->push_back(!my_tp.isNull() ? my_tp->pdgId() : -999);
-      m_trk_matchtp_pt->push_back(tmp_matchtp_pt); m_trk_matchtp_eta->push_back(tmp_matchtp_eta); m_trk_matchtp_phi->push_back(tmp_matchtp_phi);
-      m_trk_matchtp_z0->push_back(!my_tp.isNull() ? my_tp->vz() : -999); m_trk_matchtp_lxy->push_back(!my_tp.isNull() ? sqrt(my_tp->vx()*my_tp->vx() + my_tp->vy()*my_tp->vy()) : -999);
+      m_trk_matchtp_pt->push_back(tmp_matchtp_pt);
+      m_trk_matchtp_eta->push_back(tmp_matchtp_eta);
+      m_trk_matchtp_phi->push_back(tmp_matchtp_phi);
+      m_trk_matchtp_z0->push_back(!my_tp.isNull() ? my_tp->vz() : -999);
+      m_trk_matchtp_lxy->push_back(!my_tp.isNull() ? sqrt(my_tp->vx()*my_tp->vx() + my_tp->vy()*my_tp->vy()) : -999);
       m_trk_matchtp_d0->push_back(-999);
 
       if (TrackingInJets) {
-        int InJet = 0; int InJetH = 0; int InJetVH = 0;
+        int InJet = 0;
+        int InJetH = 0;
+        int InJetVH = 0;
         for (int ij = 0; ij < (int)v_jets.size(); ij++) {
           float dR = deltaR(tmp_trk_eta, tmp_trk_phi, v_jets.at(ij).eta(), v_jets.at(ij).phi());
           if (dR < 0.4) {
@@ -1106,13 +1312,16 @@ void L1TrackHitNtupleMaker::analyze(const edm::Event& iEvent, const edm::EventSe
             if (ij < NJETS) jets_trk_sumpt[ij] += tmp_trk_pt;
           }
         }
-        m_trk_injet->push_back(InJet); m_trk_injet_highpt->push_back(InJetH); m_trk_injet_vhighpt->push_back(InJetVH);
+        m_trk_injet->push_back(InJet);
+        m_trk_injet_highpt->push_back(InJetH);
+        m_trk_injet_vhighpt->push_back(InJetVH);
       }
 
       const TTBV hitPattern((int)iterL1Track->hitPattern(), setup->numLayers());
       const double zT = iterL1Track->z0() + setup->chosenRofZ() * iterL1Track->tanL();
       const vector<int>& le = layerEncoding->layerEncoding(zT);
-      vector<int> layers; layers.reserve(hitPattern.size());
+      vector<int> layers;
+      layers.reserve(hitPattern.size());
       for (int layer : hitPattern.ids()) layers.push_back(le[layer]);
       m_trk_layers->push_back(layers);
     }
@@ -1138,21 +1347,24 @@ void L1TrackHitNtupleMaker::analyze(const edm::Event& iEvent, const edm::EventSe
 
     if (MCTruthTTClusterHandle->findTTClusterRefs(tp_ptr).empty()) continue;
 
-    std::vector<edm::Ref<edmNew::DetSetVector<TTStub<Ref_Phase2TrackerDigi_>>, TTStub<Ref_Phase2TrackerDigi_>>> theStubRefs = MCTruthTTStubHandle->findTTStubRefs(tp_ptr);
+    std::vector<edm::Ref<edmNew::DetSetVector<TTStub<Ref_Phase2TrackerDigi_>>, TTStub<Ref_Phase2TrackerDigi_>>> theStubRefs = MCTruthTTStubAcceptedHandle->findTTStubRefs(tp_ptr);
     int nStubTP = (int)theStubRefs.size();
     if (TP_minNStub > 0 && nStubTP < TP_minNStub) continue;
 
-    int hasStubInLayer[11] = {0}; int nStubLayerTP = 0;
+    int hasStubInLayer[11] = {0};
+    int nStubLayerTP = 0;
     for (auto& theStubRef : theStubRefs) {
       DetId detid(theStubRef->getDetId());
       int layer = (detid.subdetId() == StripSubdetector::TOB) ? static_cast<int>(tTopo->layer(detid)) - 1 : static_cast<int>(tTopo->layer(detid)) + 5;
-      hasStubInLayer[layer] = MCTruthTTStubHandle->findTrackingParticlePtr(theStubRef).isNull() ? 1 : 2;
+      hasStubInLayer[layer] = MCTruthTTStubAcceptedHandle->findTrackingParticlePtr(theStubRef).isNull() ? 1 : 2;
     }
     for (int isum : hasStubInLayer) if (isum >= 1) nStubLayerTP++;
     if (TP_minNStubLayer > 0 && nStubLayerTP < TP_minNStubLayer) continue;
 
     std::vector<edm::Ptr<TTTrack<Ref_Phase2TrackerDigi_>>> matchedTracks = MCTruthTTTrackHandle->findTTTrackPtrs(tp_ptr);
-    int nMatch = 0; int i_track = -1; float i_chi2dof = 99999;
+    int nMatch = 0;
+    int i_track = -1;
+    float i_chi2dof = 99999;
 
     for (int it = 0; it < (int)matchedTracks.size(); it++) {
       if (!MCTruthTTTrackHandle->isLooselyGenuine(matchedTracks.at(it))) continue;
@@ -1164,15 +1376,21 @@ void L1TrackHitNtupleMaker::analyze(const edm::Event& iEvent, const edm::EventSe
         nMatch++;
         float tmp_trk_chi2dof = matchedTracks.at(it)->chi2() / (2 * tmp_trk_nstub - L1Tk_nPar);
         if (i_track < 0 || tmp_trk_chi2dof < i_chi2dof) {
-          i_track = it; i_chi2dof = tmp_trk_chi2dof;
+          i_track = it;
+          i_chi2dof = tmp_trk_chi2dof;
         }
       }
     }
 
-    m_tp_pt->push_back(iterTP->pt()); m_tp_eta->push_back(iterTP->eta()); m_tp_phi->push_back(iterTP->phi());
+    m_tp_pt->push_back(iterTP->pt());
+    m_tp_eta->push_back(iterTP->eta());
+    m_tp_phi->push_back(iterTP->phi());
     m_tp_lxy->push_back(lxy);
-    m_tp_ngenpart->push_back((int)iterTP->genParticles().size()); m_tp_z0->push_back(iterTP->vz()); m_tp_pdgid->push_back(tmp_tp_pdgid);
-    m_tp_nmatch->push_back(nMatch); m_tp_nstub->push_back(nStubTP); m_tp_charge->push_back(iterTP->charge());
+    m_tp_z0->push_back(iterTP->vz());
+    m_tp_pdgid->push_back(tmp_tp_pdgid);
+    m_tp_nmatch->push_back(nMatch);
+    m_tp_nstub->push_back(nStubTP);
+    m_tp_charge->push_back(iterTP->charge());
 
     if (nMatch > 0) {
       m_matchtrk_pt->push_back(matchedTracks.at(i_track)->momentum().perp());
@@ -1181,15 +1399,21 @@ void L1TrackHitNtupleMaker::analyze(const edm::Event& iEvent, const edm::EventSe
       m_matchtrk_z0->push_back(matchedTracks.at(i_track)->z0());
       m_matchtrk_nstub->push_back((int)matchedTracks.at(i_track)->getStubRefs().size());
     } else {
-      m_matchtrk_pt->push_back(-999); m_matchtrk_eta->push_back(-999); m_matchtrk_phi->push_back(-999);
-      m_matchtrk_z0->push_back(-999); m_matchtrk_nstub->push_back(-999);
+      m_matchtrk_pt->push_back(-999);
+      m_matchtrk_eta->push_back(-999);
+      m_matchtrk_phi->push_back(-999);
+      m_matchtrk_z0->push_back(-999);
+      m_matchtrk_nstub->push_back(-999);
     }
   }
 
   if (TrackingInJets) {
     for (int ij = 0; ij < (int)v_jets.size() && ij < NJETS; ij++) {
-      m_jet_eta->push_back(v_jets.at(ij).eta()); m_jet_phi->push_back(v_jets.at(ij).phi()); m_jet_pt->push_back(v_jets.at(ij).pt());
-      m_jet_tp_sumpt->push_back(jets_tp_sumpt[ij]); m_jet_trk_sumpt->push_back(jets_trk_sumpt[ij]);
+      m_jet_eta->push_back(v_jets.at(ij).eta());
+      m_jet_phi->push_back(v_jets.at(ij).phi());
+      m_jet_pt->push_back(v_jets.at(ij).pt());
+      m_jet_tp_sumpt->push_back(jets_tp_sumpt[ij]);
+      m_jet_trk_sumpt->push_back(jets_trk_sumpt[ij]);
     }
   }
 

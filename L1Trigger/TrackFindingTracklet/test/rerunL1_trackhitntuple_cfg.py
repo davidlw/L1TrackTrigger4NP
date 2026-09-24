@@ -110,7 +110,7 @@ process.load("L1Trigger.TrackFindingTracklet.L1TrackHitNtupleMaker_cfi")
 process.load('SimTracker.TrackTriggerAssociation.TrackTriggerAssociator_cff')
 
 # Point the ntuple maker to your specific collections
-process.L1TrackHitNtupleMaker.L1TrackInputTag = cms.InputTag("l1tTTTracksFromExtendedTrackletEmulation", "Level1TTTracks")
+process.L1TrackHitNtupleMaker.L1TrackInputTag = cms.InputTag("l1tTTTracksFromTrackletEmulation", "Level1TTTracks")
 process.L1TrackHitNtupleMaker.L1StubInputTag = cms.InputTag("TTStubsFromPhase2TrackerDigis", "StubAccepted")
 process.L1TrackHitNtupleMaker.MCTruthTrackInputTag = cms.InputTag("TTTrackAssociatorFromPixelDigis", "Level1TTTracks")
 
