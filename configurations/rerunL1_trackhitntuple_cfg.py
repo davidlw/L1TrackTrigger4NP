@@ -141,42 +141,13 @@ from Configuration.StandardSequences.earlyDeleteSettings_cff import customiseEar
 process = customiseEarlyDelete(process)
 # End adding early deletion
 
-'''
-# --- FORCE UPC 0.8 GeV RESET ---
-def apply_upc_low_pt_settings(process):
-# --- MANUAL WINDOW SCALING FOR 0.8 GeV ---
-    if hasattr(process, 'TTStubAlgorithm_official_Phase2TrackerDigi_'):
-        # 1. Scale the Barrel Cuts
-        original_barrel = process.TTStubAlgorithm_official_Phase2TrackerDigi_.BarrelCut
-        process.TTStubAlgorithm_official_Phase2TrackerDigi_.BarrelCut = cms.vdouble([x * 7 for x in original_barrel])
-
-        # 2. Scale the Tilted Barrel Cuts
-        for pset in process.TTStubAlgorithm_official_Phase2TrackerDigi_.TiltedBarrelCutSet:
-            original_tilted = pset.TiltedCut
-            pset.TiltedCut = cms.vdouble([x * 7 for x in original_tilted])
-
-        # 3. Scale the Endcap Cuts
-        for pset in process.TTStubAlgorithm_official_Phase2TrackerDigi_.EndcapCutSet:
-            original_endcap = pset.EndcapCut
-            pset.EndcapCut = cms.vdouble([x * 7 for x in original_endcap])
-
-        # Define the Analytic calculation for 0.8 GeV
-#        process.TTStubAlgorithm_official_Phase2TrackerDigi_.findingAlgorithm = cms.PSet(
-#            AlgorithmName = cms.string("TTStubAlgorithm_official_Phase2TrackerDigi_"),
-#            MinPtThreshold = cms.double(0.8)
-#        )
-    return process
-
-# Execute the customization
-process = apply_upc_low_pt_settings(process)
-'''
 
 # --- L1 TRACK NTUPLE MAKER START ---
 process.load("L1Trigger.TrackFindingTracklet.L1TrackHitNtupleMaker_cfi")
 process.load('SimTracker.TrackTriggerAssociation.TrackTriggerAssociator_cff')
 
 # Point the ntuple maker to your specific collections
-process.L1TrackHitNtupleMaker.L1TrackInputTag = cms.InputTag("l1tTTTracksFromExtendedTrackletEmulation", "Level1TTTracks")
+process.L1TrackHitNtupleMaker.L1TrackInputTag = cms.InputTag("l1tTTTracksFromTrackletEmulation", "Level1TTTracks")
 process.L1TrackHitNtupleMaker.L1StubInputTag = cms.InputTag("TTStubsFromPhase2TrackerDigis", "StubAccepted")
 process.L1TrackHitNtupleMaker.MCTruthTrackInputTag = cms.InputTag("TTTrackAssociatorFromPixelDigis", "Level1TTTracks")
 # NOTE: TP_minPt = 0 here does NOT give truth particles down to 0 pT. The
