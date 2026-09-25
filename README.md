@@ -78,6 +78,8 @@ git cms-addpkg L1Trigger/TrackTrigger/
 
 git cms-addpkg L1Trigger/TrackerDTC/
 
+git cms-addpkg L1Trigger/TrackFindingTMTT/
+
 git cms-addpkg SimTracker/TrackTriggerAssociation/
 
 scram b -j4
@@ -96,6 +98,8 @@ cp L1TrackTrigger4NP/L1Trigger/TrackTrigger/plugins/* L1Trigger/TrackTrigger/plu
 
 cp L1TrackTrigger4NP/L1Trigger/TrackTrigger/python/* L1Trigger/TrackTrigger/python/
 
+cp L1TrackTrigger4NP/L1Trigger/TrackFindingTMTT/src/* L1Trigger/TrackFindingTMTT/src/
+
 cp L1TrackTrigger4NP/L1Trigger/TrackerDTC/src/* L1Trigger/TrackerDTC/src/
 
 cp L1TrackTrigger4NP/SimTracker/TrackTriggerAssociation/plugins/* SimTracker/TrackTriggerAssociation/plugins/
@@ -106,4 +110,4 @@ scram b -j4
 
 cd L1TrackTrigger4NP/configurations
 
-cmsRun rerunL1_trackhitntuple_cfg.py # require DIGI-RAW files as inputs 
+cmsRun rerunL1_trackhitntuple_cfg.py 
