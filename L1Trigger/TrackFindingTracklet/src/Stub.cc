@@ -184,11 +184,7 @@ double Stub::zapprox() const {
 }
 
 double Stub::phiapprox(double phimin, double) const {
-  int lphi = 1;
-  if (layer_.value() >= 3) {
-    lphi = 8;
-  }
-  return reco::reducePhiRange(phimin + phi_.value() * settings_.kphi() / lphi);
+  return reco::reducePhiRange(phimin + phi_.value() * settings_.kphi(layerdisk()));
 }
 
 unsigned int Stub::layerdisk() const {
