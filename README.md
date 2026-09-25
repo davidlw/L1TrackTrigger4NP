@@ -98,6 +98,8 @@ cp L1TrackTrigger4NP/L1Trigger/TrackTrigger/plugins/* L1Trigger/TrackTrigger/plu
 
 cp L1TrackTrigger4NP/L1Trigger/TrackTrigger/python/* L1Trigger/TrackTrigger/python/
 
+cp L1TrackTrigger4NP/L1Trigger/TrackTrigger/src/* L1Trigger/TrackTrigger/src/
+
 cp L1TrackTrigger4NP/L1Trigger/TrackFindingTMTT/src/* L1Trigger/TrackFindingTMTT/src/
 
 cp L1TrackTrigger4NP/L1Trigger/TrackerDTC/src/* L1Trigger/TrackerDTC/src/

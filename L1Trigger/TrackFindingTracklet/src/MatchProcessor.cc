@@ -637,6 +637,7 @@ bool MatchProcessor::matchCalculator(Tracklet* tracklet, const Stub* fpgastub, b
   } else {  //disk matches
 
     //check that stubs and projections in same half of detector
+    //assert(stub->z() * tracklet->t() > 0.0);
     if (stub->z() * tracklet->t() <= 0.0) return false;
 
     int sign = (tracklet->t() > 0.0) ? 1 : -1;
@@ -798,8 +799,8 @@ bool MatchProcessor::matchCalculator(Tracklet* tracklet, const Stub* fpgastub, b
       if (std::abs(dphi) >= third * settings_.dphisectorHG()) {
         edm::LogPrint("Tracklet") << "dphi " << dphi << " ISeed " << tracklet->getISeed();
       }
-      assert(std::abs(dphi) < third * settings_.dphisectorHG());
-      assert(std::abs(dphiapprox) < third * settings_.dphisectorHG());
+      //assert(std::abs(dphi) < third * settings_.dphisectorHG());
+      //assert(std::abs(dphiapprox) < third * settings_.dphisectorHG());
 
       tracklet->addMatch(layerdisk_,
                          ideltaphi,

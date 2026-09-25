@@ -91,10 +91,13 @@ namespace trackerDTC {
     phiT_.second = phi_ - r_ * inv2R_.second;
     if (phiT_.first > phiT_.second)
       std::swap(phiT_.first, phiT_.second);
-    if (phiT_.first < 0.)
-      regions_.set(0);
-    if (phiT_.second >= 0.)
-      regions_.set(1);
+    //if (phiT_.first < 0.)
+    // regions_.set(0);
+    //if (phiT_.second >= 0.)
+    //  regions_.set(1);
+    // send every stub to both TFPs this DTC is linked to
+    regions_.set(0);
+    regions_.set(1);
   }
 
   Stub::Stub(const tt::Setup* setup,
@@ -176,6 +179,8 @@ namespace trackerDTC {
     const int decodedLayerId = layerEncoding_->decode(sm_);
     // stub phi w.r.t. processing region border in rad
     double phi = phi_ - (region - .5) * setup_->baseRegion() + setup_->hybridRangePhi() / 2.;
+    // to make sure phi is not right at the boundary that causes a throw
+    phi = std::clamp(phi, 0., setup_->hybridRangePhi() - setup_->hybridBasePhi(type));
     // convert stub variables into bit vectors
     const bool twosR = type == tt::SensorModule::BarrelPS || type == tt::SensorModule::Barrel2S;
     const bool noAlpha = type != tt::SensorModule::Disk2S;

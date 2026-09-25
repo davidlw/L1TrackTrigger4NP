@@ -315,10 +315,13 @@ namespace trklet {
 
     // Phi width of nonant including overlaps (at widest point).
     double dphisectorHG() const {
+      // Phi width of nonant including overlaps. Full duplication: two nonants.
+      // Must equal tt::Setup::hybridRangePhi().
+      return 2. * (2 * M_PI / N_SECTOR);
       //These values are used in the DTC emulation code.
-      double rsectmin = 21.8;
-      double rsectmax = 112.7;
-      return 2 * M_PI / N_SECTOR + rinvmax() * std::max(rcrit_ - rsectmin, rsectmax - rcrit_);
+      //double rsectmin = 21.8;
+      //double rsectmax = 112.7;
+      //return 2 * M_PI / N_SECTOR + rinvmax() * std::max(rcrit_ - rsectmin, rsectmax - rcrit_);
     }
     
     //Checking if a low pt track can even reack this layer
@@ -428,13 +431,21 @@ namespace trklet {
     // Helix param digisation granularities
     //0.02 here is the maximum range in rinv values that can be represented
     double krinvpars() const {
+      //int shift = ceil(-log2(0.02 * rmaxdisk_ / ((1 << nbitsrinv_) * dphisectorHG())));
+      //return dphisectorHG() / rmaxdisk_ / (1 << shift);
+      //!!!!!!!!!!!!!!!!!!!!!!!!!!!
       return kphi1() / kr() * std::pow(2, rinv_shift_);
     }
     double kphi0pars() const { return 2 * kphi1(); }
+    //double ktpars() const { return maxt_ / (1 << nbitst_); }
+    //!!!!!!!!!!!!!!!
     double ktpars() const { return kz() / kr() * std::pow(2, t_shift_); }
     double kz0pars() const { return kz(); }
     double kd0pars() const { return kd0(); }
 
+    //double kphider() const { return kphi() / kr() / 256; }
+    //double kphiderdisk() const { return kphi() / kr() / 128; }
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!
     double kphider() const { return kphi1() / kr() * std::pow(2, SS_phiderL_shift_); }
     double kphiderdisk() const { return kphi1() / kr() * std::pow(2, SS_phiderD_shift_); }
     double kzder() const { return 1.0 / 64; }
@@ -539,7 +550,11 @@ namespace trklet {
     std::array<unsigned int, N_LAYER + N_DISK> nrbitsstub_{{7, 7, 7, 7, 7, 7, 12, 12, 12, 12, 12}};
 
     unsigned int nrbitsprojderdisk_{9};
+    //unsigned int nbitsphiprojderL123_{10};
+    //!!!!!!!!!!!!!!!!!!! only for very low pt
     unsigned int nbitsphiprojderL123_{12};
+    //unsigned int nbitsphiprojderL456_{10};
+    //!!!!!!!!!!!!!!!!!!! only for very low pt
     unsigned int nbitsphiprojderL456_{12};
     unsigned int nbitszprojderL123_{10};
     unsigned int nbitszprojderL456_{9};
@@ -601,13 +616,22 @@ namespace trklet {
 
     double half2SmoduleWidth_{4.57};
 
+    //double maxrinv_{0.006};
+    //!!!!!!!!!!!!!!!!!!!!!!
     double maxrinv_{0.0184};
+    //double maxrinv_{0.02};
     double maxd0_{10.0};
 
     unsigned int nbitsd0_{13};
 
+    //double ptmin_{2.0};  //minumim pt for tracks
+    //!!!!!!!!!!!!!!!!
+    //double ptmin_{1.0};  //minumim pt for tracks
     double ptmin_{0.5};  //minumim pt for tracks
 
+    //double ptcutte_{1.8};  //Minimum pt in TE
+    //!!!!!!!!!!!!!!!!
+    //double ptcutte_{0.8};  //Minimum pt in TE
     double ptcutte_{0.3};  //Minimum pt in TE
 
     // VALUE AUTOMATICALLY INCREASED FOR EXTENDED TRACKING BY PYTHON CFG
@@ -620,6 +644,8 @@ namespace trklet {
                                          //in the extended project
 
     //Bits used to store track parameter in tracklet
+    //int nbitsrinv_{14};
+    //!!!!!!!!!!!!!!!!
     int nbitsrinv_{17};
     int nbitsphi0_{18};
     int nbitst_{14};
@@ -637,6 +663,8 @@ namespace trklet {
     int SS_phiL_shift_{0};
     int PS_zL_shift_{0};  // z projections have global precision in ITC
 
+    //int SS_phiderL_shift_{-5};
+    //!!!!!!!!!!!!!!!!
     int SS_phiderL_shift_{-4};
     int PS_zderL_shift_{-7};  // Kderz = 2^shift * Kz/Kr
     int SS_zderL_shift_{-7};
@@ -645,6 +673,8 @@ namespace trklet {
     int SS_phiD_shift_{3};
     int PS_rD_shift_{1};  // a bug?! coarser by a factor of two then stubs??
 
+    //int SS_phiderD_shift_{-4};
+    //!!!!!!!!!!!!!!!!
     int SS_phiderD_shift_{-3};
     int PS_rderD_shift_{-6};  //Kderrdisk = 2^shift * Kr/Kz
 
@@ -662,6 +692,8 @@ namespace trklet {
     int fitphi0bitshift_{6};  //4 OK?
     int fittbitshift_{10};    //4 OK? //lower number gives rounding problems
     int fitz0bitshift_{8};    //6 OK?
+    //int nbitsrinvfit_{15};    //Total bits for rinv in fpgafitpars
+    //!!!!!!!!!!!!!!!!!
     int nbitsrinvfit_{16};    //Total bits for rinv in fpgafitpars
     int nbitsphi0fit_{19};    //Total bits for phi0 in fpgafitpars
     int nbitsd0fit_{19};      //Total bits for d0 in fpgafitpars
@@ -987,6 +1019,9 @@ namespace trklet {
     bool bookHistos_{false};
 
     // pt constants
+    //double ptcut_{1.91};  //Minimum pt cut
+    //!!!!!!!!!!!!!!!!
+    //double ptcut_{0.91};  //Minimum pt cut
     double ptcut_{0.41};  //Minimum pt cut
 
     // Parameters for bit sizes
