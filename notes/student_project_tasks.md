@@ -4,9 +4,13 @@ Building on Nicole's low-pT configuration. Ordered by priority, and grouped so
 that each phase produces something usable before the next one starts.
 
 **Suggested thesis spine:** *Fixed-point precision and occupancy limits of a
-low-pT Level-1 track trigger for heavy-ion collisions at the HL-LHC.* Tasks
-T2, T4 and T5 are the core; T3 and T6 make it a systems result rather than a
-numerical one.
+low-pT Level-1 track trigger for heavy-ion collisions at the HL-LHC.* T2, T5
+and T5b are the core — the arithmetic, the cuts it allows, and the guard that
+currently stands in for both. T4 and T7 make it a systems result rather than a
+numerical one; T3 and T6 are the supporting measurements.
+
+The one-sentence version of the likely conclusion: **the low-pT limit of this
+algorithm is set by its arithmetic, not by its cuts.**
 
 Two things gate much of this and are **not** the student's to fix:
 
