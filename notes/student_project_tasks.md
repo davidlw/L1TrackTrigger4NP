@@ -56,31 +56,56 @@ the fact the whole project rests on.
 
 ### T2. How wrong is the projection at low pT?  **[free]**
 
-**The most valuable thing a new student can do here, and it needs no data.**
+**Do this first. It is arithmetic, needs no data, and the answer decides whether
+the rest of the project is tuning or repair.**
 
 The emulation projects a track to a layer with a third-order expansion of the
-arcsine ([`IMATH_TrackletCalculator.h:250-258`](../L1Trigger/TrackFindingTracklet)):
+arcsine (`IMATH_TrackletCalculator.h:250-258`):
 
 ```
-phi(r) = phi0 - x·(1 + x²/6)          where x = r·rinv/2      [exact: phi0 - asin(x)]
-dphi/dr = -rinv/2                                             [exact: -rinv/2 / sqrt(1-x²)]
+phi(r) = phi0 - x·(1 + x²/6)      where x = r·rinv/2      [exact: phi0 - asin(x)]
+dphi/dr = -rinv/2                                         [exact: -rinv/2 / sqrt(1-x²)]
 ```
 
-Both are excellent at 2 GeV and both degrade as x → 1. Quantify the error in
-**millimetres at the layer** (multiply the angular error by the layer radius),
-as a function of pT and layer, and compare it to the match window
-`rphimatchcut_` for that layer and seed.
+Both are excellent at 2 GeV and both fail as x → 1. Expressed in millimetres at
+the layer, against match windows of 1–3 mm:
 
-Then extend: add the fifth-order term 3x⁵/40 and the 1/√(1−x²) factor to the
-same expressions and show how much of the error is recovered.
+| pT [GeV] | L1 | L2 | L3 | L4 | L5 | L6 |
+|---|---|---|---|---|---|---|
+| 2.0 | 0.00 | 0.00 | 0.00 | 0.02 | 0.06 | 0.24 |
+| 1.5 | 0.00 | 0.00 | 0.01 | 0.07 | 0.26 | 1.07 |
+| 1.0 | 0.00 | 0.01 | 0.10 | 0.52 | 2.13 | **9.5** |
+| 0.8 | 0.00 | 0.04 | 0.31 | 1.69 | **7.2** | **36** |
+| 0.6 | 0.01 | 0.17 | 1.40 | **8.3** | **41** | — |
+| 0.5 | 0.04 | 0.43 | **3.8** | **25** | **201** | — |
+| 0.4 | 0.11 | 1.41 | **14** | **157** | — | — |
 
-*Deliverable:* a two-panel figure (error vs pT per layer, with the match window
-overlaid) and a table. Goes straight into the internal note.
-*Learns:* series expansions in fixed point, why "the algorithm is exact" is
-never true, how to compare an arithmetic error to a physical cut.
-*Watch for:* the answer should be a few centimetres at L4 for 0.5 GeV against
-windows of 1–3 mm. If it is, that is a result: **no widening of the match
-windows can compensate for it**, and the expansion has to be extended.
+Reproduce this table, then check it against the emulation (T3), then fix it.
+The limits of the current expansion, at 1 mm accuracy:
+
+| layer | valid for | layer | valid for |
+|---|---|---|---|
+| L1 | pT > 0.26 GeV | L4 | pT > 0.88 GeV |
+| L2 | pT > 0.43 GeV | L5 | pT > 1.15 GeV |
+| L3 | pT > 0.64 GeV | L6 | **pT > 1.52 GeV** |
+
+The repair is to extend the series: `x10_i = 1 + x²/6` → `1 + x²/6 + 3x⁴/40`
+(one extra multiply and add per projection, reusing `x12A_i = x²`), and
+`der_phiL_i = der_phiL·(1 + x²/2)` for the derivative. Both need their bit
+widths rechecked — `x10`'s range grows from 1.1 to about 1.3 — and the HLS side
+carries the same expansion, so it is a firmware change as well as an emulation
+one.
+
+*Deliverable:* the table above, measured; then the same table after extending
+the expansion, showing what order is needed to reach the match window at
+0.5 GeV.
+*Learns:* series expansions in fixed point; that "the algorithm is exact" is
+never true; how to compare an arithmetic error to a physical cut.
+*Consequence to state plainly in the thesis:* below roughly 1.5 GeV the
+dominant error on a projection to L6 is **not** multiple scattering or
+detector resolution, it is the arithmetic. Widening the match windows cannot
+compensate for a systematic offset an order of magnitude larger than the
+window.
 
 ### T3. Does the emulation agree with itself?
 
@@ -135,31 +160,89 @@ still be unusable if the output format cannot express it.
 
 ## Phase 3 — the thesis core (months 3–6)
 
-### T5. Match-window optimisation
+### T5. Match windows from the residuals
 
-**The freest knob in the whole system, and nobody has touched it.** The match
-cuts `rphimatchcut_` / `zmatchcut_` in `Settings.h` are still the values tuned
-for 2 GeV tracks, while multiple scattering scales as 1/pT — a 0.5 GeV track's
+**The freest knob in the system, and nobody has touched it.** The cuts
+`rphimatchcut_` and `zmatchcut_` in `Settings.h` are still the values tuned for
+2 GeV tracks, while multiple scattering scales as 1/pT — a 0.5 GeV track's
 residual is roughly four times larger against an unchanged window.
 
-Changing them costs **nothing**: no bits, no memory, no firmware interface, as
+Changing them costs **nothing**: no bits, no memory, no firmware interface, so
 long as the LUT entries stay under the 10-bit ceiling of 1023
 (`TrackletLUT::initmatchcut`). With full duplication the largest entry drops
-from 741 to ~565, leaving about 1.8× flat headroom, more per layer.
+from 741 to about 565, leaving ~1.8× flat headroom, more per layer.
 
-1. Add a configurable scale factor rather than editing the array by hand.
-2. Scan it and measure efficiency, fake rate and duplicate rate versus pT.
-3. Find where the efficiency gain stops paying for the fake-rate cost.
-4. Then stop scaling flatly: L1 is the layer near the ceiling, L2–L6 have 2–3×
-   more room, so a per-layer scan is the natural next step.
-5. The physically right answer is a window that depends on pT, since that is how
+Do not scan blindly. **Measure the residual distribution and set the cut from
+it.** The machinery exists: `MatchProcessor.cc` computes the r-φ and z residuals
+for every candidate and `FillLayerResidual` already receives a `truthmatch`
+flag, so the distribution for genuine matches can be separated from
+combinatorics.
+
+1. **Open the windows wide first** — 4–5× — and only then measure. This is the
+   trap in this task: with the current cuts you can only observe residuals that
+   already passed them, so the measured width is biased low by construction and
+   the answer will look fine when it is not.
+2. Plot the r-φ and z residual for true matches versus pT, per layer and per
+   seed. Fit the width.
+3. The r-φ width should go as 1/pT (scattering). If instead it shows a
+   pT-dependent **shift**, that is T2's arithmetic error and must be fixed
+   before any tuning is meaningful.
+4. Set each cut to cover the measured distribution — the current values
+   correspond to some number of sigma at 2 GeV; keep that convention and let
+   the widths scale.
+5. Check the 1023 ceiling. L1 is the layer near it; L2–L6 have 2–3× more room,
+   so a per-layer result is the natural outcome, not a flat factor.
+6. Measure what it costs: fake rate and duplicate rate versus pT, and the
+   occupancy effect — wider windows mean more candidates per match engine,
+   which feeds straight into T7.
+7. The physically right answer is a window that depends on pT, since that is how
    the scattering scales. There is precedent for an rinv-binned table at
    `TrackletLUT.cc:928`. This is the ambitious version and would be a strong
    thesis result.
 
-*Blocked by:* low-pT samples, frozen configuration.
-*Learns:* parameter optimisation against a figure of merit; that "more
-efficiency" is never free.
+z deserves its own treatment: the z residual is driven by the z0 spread and the
+tilted-module geometry rather than by scattering alone, so it will not scale the
+same way as r-φ.
+
+*Blocked by:* low-pT samples, frozen configuration, and T2 — the cut cannot be
+set from a residual distribution that is dominated by an arithmetic offset.
+*Learns:* setting a selection from a measured distribution rather than by
+scanning; selection-bias traps; that "more efficiency" is never free.
+
+### T5b. The `reachesRadius` threshold
+
+Nicole's guard is
+
+```cpp
+bool reachesRadius(double r, double rinv) { return 0.5 * r * std::abs(rinv) < 0.9; }
+```
+
+The geometric limit is 1.0 — a track whose turning diameter just reaches the
+layer, arriving tangentially. The 0.9 is a tunable that nobody has scanned, and
+it does two different jobs that should be separated:
+
+- **preventing NaN and overflow.** `asin` is undefined past 1, and the exact
+  derivative carries 1/√(1−x²), which diverges. This is what the guard was
+  written for.
+- **rejecting tracks whose projection is worthless.** A tangential crossing
+  gives a poor stub and an ill-conditioned derivative even when the arithmetic
+  is finite.
+
+It does **not** protect the arithmetic: at x = 0.9 the truncated expansion is
+already off by about 10 cm at every layer (T2). So today the guard is admitting
+tracks whose projections are meaningless.
+
+1. Work out the per-layer pT floor the threshold implies — at 0.9, L6 needs
+   0.685 GeV where the geometric limit is 0.617.
+2. Scan it — 0.99, 0.95, 0.9, 0.8, 0.7 — against efficiency, fake rate,
+   duplicate rate, and numerical health (how many projections hit `atExtreme`,
+   how many derivative words saturate).
+3. Report the interaction with T2: with an extended expansion the threshold can
+   be raised toward the geometric limit, recovering real tracks. Without it, the
+   threshold is doing the expansion's job badly.
+
+*Blocked by:* low-pT samples. Cheap once unblocked — a one-line change and a
+scan.
 
 ### T6. Does the low-pT algorithm need wider memories at all?
 
@@ -209,12 +292,28 @@ That is close to a doubling of the input rate per processor.
 
 1. Add counters for modules that hit `maxstep_` and bins that overflow
    `maxStubsPerBin_`. They exist as internal state but are not written out.
-2. Plot the fraction of events affected versus charged multiplicity, for EPOS
-   pPb and HYDJET PbPb.
-3. Plot efficiency versus multiplicity alongside it, to show whether the
-   efficiency loss at high occupancy is truncation or something else.
-4. Measure the stub-rate increase from full duplication; the DTC's own `lost_`
+2. **Virtual-module occupancy as a function of multiplicity**, separately for
+   pPb and PbPb — they differ by more than an order of magnitude in N_ch
+   (~250 versus ~8000), so they are two different regimes and must be plotted
+   on their own axes, not overlaid. For each: the mean and the tail of the
+   stub count per VM bin against the limit of 15, and the fraction of bins
+   that overflow.
+3. Break the loss down by layer and by seed. L1 has the highest stub density
+   and the most virtual modules (`nbitsallstubs_` = 3 there against 2
+   elsewhere), so it will saturate first.
+4. Plot the fraction of events affected versus multiplicity, and efficiency
+   versus multiplicity alongside it, to show whether the efficiency loss at
+   high occupancy is truncation or something else.
+5. Separate the two causes of the increase: the lower `ptcutte_`, which
+   multiplies the candidates each engine walks through, and full duplication,
+   which roughly doubles the stubs arriving at each processor. Running with one
+   and not the other separates them.
+6. Measure the stub-rate increase from full duplication; the DTC's own `lost_`
    counters cover the input side.
+7. If the limits are exceeded, the response is not to raise them — `maxstep_`
+   is fixed by the L1 latency budget and `maxStubsPerBin_` by memory. The
+   response is more units in parallel (`teunits_`), which costs resources. State
+   what it would cost.
 
 *Deliverable:* figures F6 and F10 of the DP note list. This is the difference
 between "works in simulation" and "works in the trigger".
@@ -250,14 +349,22 @@ project needs Vivado 2020 and the test-vector recipe in `firmware/`.
 |---|---|---|---|---|
 | 1 | T0 reproduce | onboarding | no | low |
 | 2 | T1 layer reach | note figure | no | low |
-| 3 | **T2 projection error** | **high — may invalidate the window approach** | **no** | medium |
-| 4 | T4 track word | high — external lead time | partly | medium |
-| 5 | T3 residual check | validates T2 | partly | medium |
-| 6 | **T5 match windows** | **highest — free and untouched** | yes | medium |
-| 7 | T6 constants-only | high — firmware adoption | yes | low |
-| 8 | T7 occupancy | highest for FPGA credibility | yes | high |
+| 3 | **T2 projection error** | **highest — decides whether T5 is tuning or repair** | **no** | medium |
+| 4 | T3 residual cross-check | validates T2 | partly | medium |
+| 5 | T4 track word | high — longest external lead time | partly | medium |
+| 6 | **T5 match windows from residuals** | **high — free and untouched** | yes, incl. T2 | medium |
+| 7 | T5b `reachesRadius` threshold | medium — one line, unscanned | yes | low |
+| 8 | T6 constants-only | high — firmware adoption | yes | low |
+| 9 | **T7 VM occupancy vs multiplicity** | **highest for FPGA credibility** | yes | high |
 
-T2 is placed early on purpose. If the projection error at L4 really is
-centimetres against millimetre windows, then T5 cannot succeed on its own and
-the expansion has to be fixed first — better to know that in month one than in
-month five.
+T2 sits third on purpose, and the numbers in it are the reason. At 0.5 GeV the
+projection into L4 is wrong by 25 mm against a window of 1–3 mm, and the
+`reachesRadius` guard at 0.9 admits tracks whose projections are off by 10 cm.
+Until the expansion is extended, T5 is measuring an arithmetic offset rather
+than a physical residual, and T5b is compensating for it with a blunt cut.
+Better to establish that in month one than in month five.
+
+The three tasks are also coupled and should be reported together: the
+expansion order (T2) sets how tight the windows can be (T5), the windows set
+how many candidates each engine must walk (T7), and the `reachesRadius`
+threshold (T5b) trades all three against efficiency.
