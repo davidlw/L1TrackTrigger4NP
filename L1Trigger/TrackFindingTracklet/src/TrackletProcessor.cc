@@ -59,7 +59,9 @@ TrackletProcessor::TrackletProcessor(string name, Settings const& settings, Glob
     }
   }
 
-  double dphimax = asin(0.5 * settings_.maxrinv() * rmax) - asin(0.5 * settings_.maxrinv() * rmin);
+  //double dphimax = asin(0.5 * settings_.maxrinv() * rmax) - asin(0.5 * settings_.maxrinv() * rmin);
+  double dphimax = asin(std::min(1.0, 0.5 * settings_.maxrinv() * rmax)) 
+                    - asin(std::min(1.0, 0.5 * settings_.maxrinv() * rmin));
 
   //number of fine phi bins in sector
   int nfinephibins =

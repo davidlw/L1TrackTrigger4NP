@@ -324,7 +324,7 @@ namespace trklet {
       //return 2 * M_PI / N_SECTOR + rinvmax() * std::max(rcrit_ - rsectmin, rsectmax - rcrit_);
     }
     
-    //Checking if a low pt track can even reack this layer
+    //Checking if a low pt track can even reach this layer
     // the threshold is tunable. Use 0.9 for now.
     bool reachesRadius(double r, double rinv) const { return 0.5 * r * std::abs(rinv) < 0.9; } 
 
@@ -618,8 +618,8 @@ namespace trklet {
 
     //double maxrinv_{0.006};
     //!!!!!!!!!!!!!!!!!!!!!!
-    double maxrinv_{0.0184};
-    //double maxrinv_{0.02};
+    //double maxrinv_{0.0184};
+    double maxrinv_{0.03};
     double maxd0_{10.0};
 
     unsigned int nbitsd0_{13};

@@ -181,13 +181,10 @@ void TrackletCalculatorBase::exactproj(double rproj,
                                        double& zproj,
                                        double& phider,
                                        double& zder) {
-/*  if (std::abs(0.5 * rproj * rinv) > 0.99) {
-    phiproj = phi0; // Prevents MatchProcessor's dphi check from blowing up
-    zproj = z0;
-    phider = 0.0;
-    zder = 0.0;
+  if (!settings_.reachesRadius(rproj, rinv)) {
+    phiproj = zproj = phider = zder = 0.0;
     return;
-  }*/
+  }
   phiproj = phi0 - asin(0.5 * rproj * rinv);
   zproj = z0 + (2 * t / rinv) * asin(0.5 * rproj * rinv);
 
@@ -253,6 +250,7 @@ bool TrackletCalculatorBase::addLayerProj(Tracklet* tracklet, int layer) {
     edm::LogProblem("Tracklet") << "at extreme! " << fpgaphi.value();
     return false;
   }
+  //assert(!fpgaphi.atExtreme());
 
   if (fpgaz.atExtreme())
     return false;
@@ -320,6 +318,8 @@ bool TrackletCalculatorBase::goodTrackPars(bool goodrinv, bool goodz0) {
 }
 
 bool TrackletCalculatorBase::inSector(int iphi0, int irinv, double phi0approx, double rinvapprox) {
+  if (!settings_.reachesRadius(settings_.rcrit(), rinvapprox)) return false;
+
   double phicritapprox = phi0approx - asin(0.5 * settings_.rcrit() * rinvapprox);
 
   int ifactor = 0.5 * settings_.rcrit() * settings_.krinvpars() / settings_.kphi0pars() * (1 << 8);
@@ -591,8 +591,8 @@ bool TrackletCalculatorBase::barrelSeeding(const Stub* innerFPGAStub,
 
   double rinvgate = irinv * ITC->rinv_final.K();
   for (unsigned int i = 0; i < N_LAYER - 2; ++i) {
-    //if (!settings_.reachesRadius(settings_.rmean(settings_.projlayers(iSeed_, i) - 1), rinvgate))
-    //  continue;
+    if (!settings_.reachesRadius(settings_.rmean(settings_.projlayers(iSeed_, i) - 1), rinvgate))
+      continue;
 
     //reject projection if z is out of range
     if (izproj[i] < -(1 << (settings_.nzbitsstub(0) - 1)))
