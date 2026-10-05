@@ -84,6 +84,8 @@ git cms-addpkg SimTracker/TrackTriggerAssociation/
 
 scram b -j4
 
+git clone https://github.com/davidlw/L1TrackTrigger4NP
+
 cp L1TrackTrigger4NP/L1Trigger/TrackFindingTracklet/python/* L1Trigger/TrackFindingTracklet/python/
 
 cp L1TrackTrigger4NP/L1Trigger/TrackFindingTracklet/test/* L1Trigger/TrackFindingTracklet/test/ 

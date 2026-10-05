@@ -271,9 +271,9 @@ private:
   std::vector<float>* m_allstub_trigBend;
 
   // CLUSTER BRANCHES (Wei Li / Rice)
-  //std::vector<float> *cluster_x, *cluster_y, *cluster_z; // Added cluster_z
-  //std::vector<int> *cluster_layer, *cluster_isBarrel, *cluster_halfModule, *cluster_isPS, *cluster_chipId, *cluster_sensor;
-  //std::vector<uint32_t> *cluster_detid;
+  std::vector<float> *cluster_x, *cluster_y, *cluster_z; // Added cluster_z
+  std::vector<int> *cluster_layer, *cluster_isBarrel, *cluster_halfModule, *cluster_isPS, *cluster_chipId, *cluster_sensor;
+  std::vector<uint32_t> *cluster_detid;
 
   // INCLUSIVE TTCLUSTER BRANCHES
   std::vector<float>* m_ttclus_x;
