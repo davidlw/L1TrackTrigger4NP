@@ -36,11 +36,7 @@ process.source = cms.Source("PoolSource",
 #    fileNames = cms.untracked.vstring('root://cmsxrootd.fnal.gov///store/mc/Phase2Spring24DIGIRECOMiniAOD/TT_TuneCP5_14TeV-powheg-pythia8/GEN-SIM-DIGI-RAW-MINIAOD/PU200_AllTP_140X_mcRun4_realistic_v4-v1/2560000/11d1f6f0-5f03-421e-90c7-b5815197fc85.root'),
 #    fileNames = cms.untracked.vstring('file:step3.root'),
  fileNames = cms.untracked.vstring(
-'file:/eos/cms/store/group/phys_heavyions/davidlw/StarLightJpsiPhase2_PrivateMC/Step2_DIGI_RAW_CMSSW_14_0_6/260325_123236/0000/step2_1.root'
-#'file:/eos/cms/store/group/phys_heavyions/davidlw/L1TrackTrigger/hydjet/step2_hydjet_1.root',
-#'file:/eos/cms/store/group/phys_heavyions/davidlw/L1TrackTrigger/hydjet/step2_hydjet_2.root',
-#'file:/eos/cms/store/group/phys_heavyions/davidlw/L1TrackTrigger/hydjet/step2_hydjet_3.root',
-#'file:/eos/cms/store/group/phys_heavyions/davidlw/L1TrackTrigger/hydjet/step2_hydjet_4.root',
+'file:/eos/cms/store/group/phys_heavyions/davidlw/StarLightQEDMuMuPhase2_PrivateMC/Step2_DIGI_RAW_CMSSW_14_0_6_v4_tpminpt0p3/260815_083524/0000/step2_1.root'
 ),
 # fileNames = cms.untracked.vstring('file:/eos/cms/store/group/phys_heavyions/davidlw/L1TrackTrigger/hydjet/step3_hydjet.root'),
 # fileNames = cms.untracked.vstring('root://cmsxrootd.fnal.gov///store/relval/CMSSW_14_1_0_pre3/RelValHydjetQMinBias_5362GeV/GEN-SIM-RECO/140X_mcRun4_realistic_v3_STD_2026D98_HIN_noPU-v1/2590000/9090e79c-cdcd-4606-9362-96f064976a7c.root'),
