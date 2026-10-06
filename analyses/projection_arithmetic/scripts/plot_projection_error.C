@@ -554,16 +554,16 @@ void FigSlope(const char* out, int layer = 3) {
 // drawn to scale in the plane.
 // ---------------------------------------------------------------------------
 void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
-  auto* c = new TCanvas("ctr", "", 1560, 700);
-  auto* pOv = new TPad("pOv", "", 0.000, 0.0, 0.355, 1.0);
-  auto* pZm = new TPad("pZm", "", 0.355, 0.0, 1.000, 1.0);
+  auto* c = new TCanvas("ctr", "", 1560, 610);
+  auto* pOv = new TPad("pOv", "", 0.000, 0.0, 0.435, 1.0);
+  auto* pZm = new TPad("pZm", "", 0.435, 0.0, 1.000, 1.0);
   pOv->Draw();
   pZm->Draw();
   pZm->cd();
   gPad->SetLeftMargin(0.085);
   gPad->SetRightMargin(0.025);
-  gPad->SetBottomMargin(0.115);
-  gPad->SetTopMargin(0.115);
+  gPad->SetBottomMargin(0.125);
+  gPad->SetTopMargin(0.085);
 
   const double kSensor[4] = {66.80, 67.25, 69.97, 70.41};
   const double rm = kRmean[layer], rinv = kCurv / pt, x0 = 0.5 * rm * rinv;
@@ -576,7 +576,7 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
   auto X = [&](double r, double phi) { return r * std::cos(phi - phiC); };  // radial
   auto Y = [&](double r, double phi) { return r * std::sin(phi - phiC); };  // azimuthal
 
-  const double vLo = -4.6, vHi = 9.3, rLo = 65.3, rHi = 71.7;
+  const double vLo = -4.6, vHi = 9.3, rLo = 65.6, rHi = 71.5;
   auto* fr = gPad->DrawFrame(vLo, rLo, vHi, rHi);
   fr->GetXaxis()->SetTitle("azimuthal direction  [cm]");
   fr->GetYaxis()->SetTitle("radial direction  [cm]");
@@ -695,14 +695,8 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
   }
 
   // both tracks come from the beam line, far below this patch
-  auto* aip = new TArrow(vLo + 1.35, rLo + 0.80, vLo + 0.75, rLo + 0.22, 0.012, "|>");
-  aip->SetLineColor(kGray + 3);
-  aip->SetFillColor(kGray + 3);
-  aip->SetLineWidth(2);
-  aip->Draw();
   an.SetTextColor(kGray + 3);
   an.SetTextAlign(12);
-  an.DrawLatex(vLo + 1.55, rLo + 0.80, "to the beam line");
   an.SetTextAlign(12);
   an.DrawLatex(vLo + 0.25, rm + 0.28, "r_{mean}");
   an.SetTextAlign(12);
@@ -710,12 +704,12 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
   an.SetTextAlign(32);
   an.DrawLatex(vHi - 0.25, 0.5 * (kSensor[2] + kSensor[3]) + 0.95, "outer ladder");
 
-  auto* leg = new TLegend(0.085, 0.885, 0.98, 0.965);
+  auto* leg = new TLegend(0.085, 0.925, 0.80, 0.985);
   leg->SetBorderSize(0);
   leg->SetFillStyle(0);
-  leg->SetNColumns(4);
-  leg->SetMargin(0.10);
-  leg->SetTextSize(0.029);
+  leg->SetNColumns(3);
+  leg->SetMargin(0.09);
+  leg->SetTextSize(0.030);
   auto* lt = new TLine();
   lt->SetLineColor(kRed + 1);
   lt->SetLineWidth(4);
@@ -726,23 +720,27 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
   auto* lw = new TLine();
   lw->SetLineColor(kOrange + 7);
   lw->SetLineWidth(9);
-  leg->AddEntry(lt, "true helix, and its stub", "l");
-  leg->AddEntry(lp, "the trajectory the algorithm assumes", "l");
-  leg->AddEntry(lw, Form("#pm%.1f mm match window", kWindow[layer]), "l");
-  leg->AddEntry((TObject*)nullptr, Form("L%d,  p_{T} = %.2f GeV", layer + 1, pt), "");
+  leg->AddEntry(lt, "true helix + stub", "l");
+  leg->AddEntry(lp, "assumed trajectory  (#Box at r_{mean}, #Delta at the stub)", "l");
+  leg->AddEntry(lw, Form("#pm%.1f mm window", kWindow[layer]), "l");
   leg->Draw();
+  TLatex hd;
+  hd.SetNDC();
+  hd.SetTextSize(0.034);
+  hd.SetTextAlign(32);
+  hd.DrawLatex(0.975, 0.955, Form("L%d,  p_{T} = %.2f GeV", layer + 1, pt));
 
   // ---- overview: the same two tracks, all the way from the beam line
   pOv->cd();
-  gPad->SetLeftMargin(0.155);
-  gPad->SetRightMargin(0.03);
-  gPad->SetBottomMargin(0.115);
-  gPad->SetTopMargin(0.115);
+  gPad->SetLeftMargin(0.125);
+  gPad->SetRightMargin(0.025);
+  gPad->SetBottomMargin(0.125);
+  gPad->SetTopMargin(0.085);
   // rotate the overview so the arc sits in the quadrant; the physics is the
   // same, only the choice of where phi = 0 points
   const double rot = 0.78;
   const double OV = 86.;
-  auto* fo = gPad->DrawFrame(-7., -7., OV, OV);
+  auto* fo = gPad->DrawFrame(-5., -5., OV, OV);
   fo->GetXaxis()->SetTitle("x  [cm]");
   fo->GetYaxis()->SetTitle("y  [cm]");
   fo->GetXaxis()->SetTitleSize(0.046);
@@ -790,7 +788,7 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
       const double pt_ = phi0 - std::asin(xs) + rot;
       const double pp_ = phi0 - asin3(xmL) - (rs - kRmean[layer]) * 0.5 * rinv + rot;
       auto* gl = new TGraph();
-      for (double r = kRmean[layer] - 9.; r <= kRmean[layer] + 9.; r += 3.0) {
+      for (double r = kRmean[layer] - 15.; r <= kRmean[layer] + 15.; r += 3.0) {
         double ph = phi0 - asin3(xmL) - (r - kRmean[layer]) * 0.5 * rinv + rot;
         gl->SetPoint(gl->GetN(), r * std::cos(ph), r * std::sin(ph));
       }
@@ -833,7 +831,7 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
         // evaluated at the stub's radius. Drawn well past the +-3.75 cm it is
         // used over, so that it reads as the straight line it is.
         auto* gl = new TGraph();
-        for (double r = kRmean[L] - 9.; r <= kRmean[L] + 9.; r += 3.0) {
+        for (double r = kRmean[L] - 15.; r <= kRmean[L] + 15.; r += 3.0) {
           double ph = phi0 - asin3(xmL) - (r - kRmean[L]) * 0.5 * rinv + rot;
           gl->SetPoint(gl->GetN(), r * std::cos(ph), r * std::sin(ph));
         }
@@ -906,14 +904,11 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
   ov.DrawLatex(2.5, -3.5, "beam line");
   ov.SetTextColor(kAzure + 2);
   ov.SetTextAlign(32);
-  ov.DrawLatex(40., 65., "shown at right");
-  ov.SetTextColor(kViolet + 2);
+  ov.DrawLatex(44., 66., "shown at right");
+  ov.SetTextColor(kRed + 1);
   ov.SetTextAlign(12);
-  ov.SetTextSize(0.036);
-  ov.DrawLatex(2., 84., "#odot  the two seed stubs: they fix r_{inv} and #phi_{0}");
-  ov.DrawLatex(2., 79., "#Box  the projection to each layer, taken at r_{mean}");
-  ov.DrawLatex(2., 74., "dashed: its linear extension, slope #minusr_{inv}/2");
-  ov.DrawLatex(2., 69., "#Delta  where that lands at the stub's own radius");
+  ov.SetTextSize(0.037);
+  ov.DrawLatex(3., 80., "#odot  seed stubs: they fix r_{inv} and #phi_{0}");
 
   Save(c, out);
 }
