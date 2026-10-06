@@ -146,6 +146,7 @@ void FigGeometry(const char* out) {
   leg->SetBorderSize(0);
   leg->SetFillStyle(0);
   leg->SetTextSize(0.0262);
+  leg->SetHeader("x = r #upoint r_{inv}/2 = r / 2R   (1 at the turning point)");
   leg->AddEntry(gT, "0.5 GeV, true helix   #phi_{0} #minus asin(x)", "l");
   leg->AddEntry(gA, "0.5 GeV, as projected   #phi_{0} #minus (x + x^{3}/6)", "l");
   leg->AddEntry(mA, "layer crossings: true #bullet / projected #circ", "p");
@@ -157,14 +158,6 @@ void FigGeometry(const char* out) {
   tx.SetNDC();
   tx.SetTextSize(0.038);
   tx.DrawLatex(0.12, 0.945, "Where the algorithm thinks the track is");
-  tx.SetTextSize(0.034);
-  tx.SetTextColor(kRed + 2);
-  tx.DrawLatex(0.50, 0.33, "x = r #upoint r_{inv}/2 = r / 2R");
-  tx.SetTextSize(0.027);
-  tx.SetTextColor(kGray + 3);
-  tx.DrawLatex(0.50, 0.275, "fraction of the way from the beam");
-  tx.DrawLatex(0.50, 0.233, "line to the turning point");
-  tx.DrawLatex(0.50, 0.173, "x #rightarrow 1 : the series breaks down");
   Save(c, out);
 }
 
@@ -189,11 +182,11 @@ void FigVsPt(const char* out) {
   fr->GetXaxis()->SetNoExponent();
 
   const int col[6] = {0, 0, kGreen + 2, kOrange + 7, kMagenta + 2, kRed + 1};
-  auto* leg = new TLegend(0.17, 0.62, 0.56, 0.89);
+  auto* leg = new TLegend(0.55, 0.60, 0.97, 0.90);
   leg->SetBorderSize(0);
   leg->SetFillStyle(0);
   leg->SetTextSize(0.031);
-  leg->SetHeader("3rd-order series, L1L2 seed");
+  leg->SetHeader("L1L2 seed, 3rd order");
   for (int L = 2; L < 6; ++L) {
     auto* g = new TGraph();
     for (double pt = 0.35; pt <= 3.0; pt *= 1.01) {
@@ -204,7 +197,7 @@ void FigVsPt(const char* out) {
     g->SetLineColor(col[L]);
     g->SetLineWidth(3);
     g->Draw("L same");
-    leg->AddEntry(g, Form("L%d   (match window %.1f mm)", L + 1, kWindow[L]), "l");
+    leg->AddEntry(g, Form("L%d   window %.1f mm", L + 1, kWindow[L]), "l");
     auto* w = new TLine(0.35, kWindow[L], 3.0, kWindow[L]);
     w->SetLineColor(col[L]);
     w->SetLineStyle(3);
@@ -216,10 +209,6 @@ void FigVsPt(const char* out) {
   tx.SetNDC();
   tx.SetTextSize(0.038);
   tx.DrawLatex(0.13, 0.945, "Projection error against the match window");
-  tx.SetTextSize(0.029);
-  tx.SetTextColor(kGray + 3);
-  tx.DrawLatex(0.60, 0.33, "dotted: the window for that layer");
-  tx.DrawLatex(0.60, 0.28, "above it #Rightarrow the stub is never matched");
   Save(c, out);
 }
 
@@ -271,7 +260,7 @@ void FigInLayer(const char* out, double pt = 0.7, int layer = 3) {
   gBoth->SetLineWidth(4);
   gBoth->Draw("L same");
 
-  auto* leg = new TLegend(0.15, 0.135, 0.97, 0.275);
+  auto* leg = new TLegend(0.165, 0.775, 0.97, 0.895);
   leg->SetBorderSize(0);
   leg->SetFillStyle(0);
   leg->SetTextSize(0.029);
@@ -285,7 +274,7 @@ void FigInLayer(const char* out, double pt = 0.7, int layer = 3) {
   tx.DrawLatex(0.13, 0.945, Form("Inside L%d, p_{T} = %.1f GeV", layer + 1, pt));
   tx.SetTextSize(0.029);
   tx.SetTextColor(kGray + 2);
-  tx.DrawLatex(0.455, 0.355, "r_{mean}");
+  tx.DrawLatex(0.545, 0.715, "r_{mean}");
   Save(c, out);
 }
 
