@@ -172,10 +172,6 @@ void FigGeometry(const char* out) {
   leg->AddEntry(gA2, "2 GeV, as projected (coincides, 0.2 mm at L6)", "l");
   leg->Draw();
 
-  TLatex tx;
-  tx.SetNDC();
-  tx.SetTextSize(0.038);
-  tx.DrawLatex(0.12, 0.945, "Where the algorithm thinks the track is");
   Save(c, out);
 }
 
