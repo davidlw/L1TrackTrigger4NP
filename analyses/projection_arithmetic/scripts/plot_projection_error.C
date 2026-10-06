@@ -768,45 +768,15 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
     // anchored at rmean, slope -rinv/2. At this scale it lies on the track --
     // which is why the patch has to be blown up at right.
     auto* gp = new TGraph();
-    for (double r = rm - kDrMax; r <= rm + kDrMax + 1e-9; r += 1.25) {
+    for (double r = 44.; r <= 92.; r += 3.2) {
       double ph = phi0 - asin3(x0) - (r - rm) * 0.5 * rinv + rot;
       gp->SetPoint(gp->GetN(), r * std::cos(ph), r * std::sin(ph));
     }
     gp->SetLineColor(kOrange + 8);
-    gp->SetLineWidth(4);
+    gp->SetLineWidth(3);
     gp->SetLineStyle(11);
     gp->Draw("L same");
   }
-  {  // theta is a LOCAL angle at the crossing: between the track there and the
-    // radial direction. The algorithm's slope is the one a track with theta = 0
-    // would have, i.e. it assumes the track has not yet turned.
-    const double phC = phi0A - std::asin(x0) + rot;
-    const double px = rm * std::cos(phC), py = rm * std::sin(phC);
-    auto* ray = new TLine(0, 0, 86. * std::cos(phC), 86. * std::sin(phC));
-    ray->SetLineColor(kGray + 2);
-    ray->SetLineWidth(2);
-    ray->SetLineStyle(2);
-    ray->Draw();
-
-    // the track's own direction where it crosses
-    const double dpsi = -(0.5 * rinv) / std::sqrt(1 - x0 * x0);
-    const double tx = std::cos(phC) - rm * std::sin(phC) * dpsi;
-    const double ty = std::sin(phC) + rm * std::cos(phC) * dpsi;
-    const double aTrk = std::atan2(ty, tx);
-    auto* arc = new TArc(px, py, 13., aTrk * TMath::RadToDeg(), phC * TMath::RadToDeg());
-    arc->SetFillStyle(0);
-    arc->SetLineColor(kOrange + 9);
-    arc->SetLineWidth(2);
-    arc->Draw("only");
-    TLatex ta;
-    ta.SetTextSize(0.040);
-    ta.SetTextColor(kOrange + 9);
-    ta.SetTextAlign(22);
-    const double am = 0.5 * (aTrk + phC);
-    ta.DrawLatex(px + 17. * std::cos(am), py + 17. * std::sin(am),
-                 Form("#theta = %.0f#circ", std::asin(x0) * TMath::RadToDeg()));
-  }
-
   auto* ip = new TMarker(0, 0, 20);
   ip->SetMarkerSize(1.5);
   ip->SetMarkerColor(kBlack);
@@ -834,11 +804,11 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
   ov.SetTextColor(kAzure + 2);
   ov.SetTextAlign(32);
   ov.DrawLatex(40., 65., "shown at right");
-  ov.SetTextColor(kGray + 3);
+  ov.SetTextColor(kOrange + 9);
   ov.SetTextAlign(12);
-  ov.DrawLatex(2., 81., "dotted: the radial direction at the");
-  ov.DrawLatex(2., 76., "crossing. #minusr_{inv}/2 is the slope of a");
-  ov.DrawLatex(2., 71., "track that crosses radially, #theta = 0");
+  ov.DrawLatex(2., 81., "dashed: the straight line the algorithm");
+  ov.DrawLatex(2., 76., "uses, anchored at r_{mean} with slope #minusr_{inv}/2");
+  ov.DrawLatex(2., 71., "(only #pm3.75 cm of it is actually used)");
 
   Save(c, out);
 }
