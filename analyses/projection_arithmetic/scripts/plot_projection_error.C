@@ -532,6 +532,164 @@ void FigSlope(const char* out, int layer = 3) {
   Save(c, out);
 }
 
+// ---------------------------------------------------------------------------
+// Figure 5 -- the canonical transverse view, zoomed onto one patch of L4.
+//
+// Radius runs upward, azimuth across. The ladders alternate between two radii
+// around phi, so at any given azimuth there is EITHER an inner-ladder module
+// OR an outer-ladder one; a track crosses one of them. Both are drawn here,
+// side by side in phi, with a track through each.
+//
+// For each track: the true helix, the straight line the algorithm predicts
+// (series offset at rmean, then the small-angle slope), the stub where the
+// true track meets the sensor, and the match window around the prediction at
+// that radius. The gap between them is what decides whether the stub is found.
+//
+// At these momenta the errors are centimetres, so for once everything can be
+// drawn to scale in the plane.
+// ---------------------------------------------------------------------------
+void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
+  auto* c = new TCanvas("ctr", "", 1200, 700);
+  c->SetLeftMargin(0.075);
+  c->SetRightMargin(0.02);
+  c->SetBottomMargin(0.115);
+  c->SetTopMargin(0.165);
+
+  const double kSensor[4] = {66.80, 67.25, 69.97, 70.41};
+  const double rm = kRmean[layer], rinv = kCurv / pt, x0 = 0.5 * rm * rinv;
+  const double win = kWindow[layer] / 10.;  // cm
+
+  // azimuthal arc of the TRUE track, measured from its own crossing of rmean
+  auto Vtrue = [&](double r) { return rm * (std::asin(x0) - std::asin(0.5 * r * rinv)); };
+  // ... and of the straight line the algorithm predicts
+  auto Vpred = [&](double r) { return rm * (std::asin(x0) - asin3(x0) - (r - rm) * 0.5 * rinv); };
+
+  const double vLo = -4.2, vHi = 9.3, rLo = 65.5, rHi = 71.7;
+  auto* fr = gPad->DrawFrame(vLo, rLo, vHi, rHi);
+  fr->GetXaxis()->SetTitle("azimuthal arc  r#Delta#phi  [cm]");
+  fr->GetYaxis()->SetTitle("r  [cm]");
+  fr->GetXaxis()->SetTitleSize(0.046);
+  fr->GetYaxis()->SetTitleSize(0.046);
+  fr->GetXaxis()->SetLabelSize(0.040);
+  fr->GetYaxis()->SetLabelSize(0.040);
+  fr->GetYaxis()->SetTitleOffset(0.72);
+
+  // the two ladders, adjacent in phi, staggered in radius
+  const double vSplit = 2.0;
+  auto drawModule = [&](double r0, double r1, double va, double vb) {
+    auto* box = new TBox(va, r0, vb, r1);
+    box->SetFillColorAlpha(kGray + 1, 0.30);
+    box->Draw();
+    for (double rr : {r0, r1}) {
+      auto* sl = new TLine(va, rr, vb, rr);
+      sl->SetLineColor(kGray + 3);
+      sl->SetLineWidth(3);
+      sl->Draw();
+    }
+  };
+  drawModule(kSensor[0], kSensor[1], vLo, vSplit + 0.25);   // inner ladder
+  drawModule(kSensor[2], kSensor[3], vSplit - 0.25, vHi);   // outer ladder
+
+  auto* vmean = new TLine(vLo, rm, vHi, rm);
+  vmean->SetLineStyle(3);
+  vmean->SetLineColor(kGray + 2);
+  vmean->Draw();
+
+  TLatex an;
+  an.SetTextSize(0.034);
+
+  // two tracks: A crosses the inner ladder, B the outer one
+  const double vHitA = -0.6, vHitB = 5.6;
+  const double rHitA = kSensor[0], rHitB = kSensor[2];
+  for (int k = 0; k < 2; ++k) {
+    const double rHit = (k == 0) ? rHitA : rHitB;
+    const double shift = ((k == 0) ? vHitA : vHitB) - Vtrue(rHit);
+
+    auto* gT = new TGraph();
+    for (double r = rLo; r <= rHi; r += 0.25)
+      gT->SetPoint(gT->GetN(), Vtrue(r) + shift, r);
+    gT->SetLineColor(kRed + 1);
+    gT->SetLineWidth(4);
+    gT->Draw("L same");
+
+    auto* gP = new TGraph();
+    for (double r = rLo; r <= rHi; r += 0.62)
+      gP->SetPoint(gP->GetN(), Vpred(r) + shift, r);
+    gP->SetLineColor(kOrange + 8);
+    gP->SetLineWidth(3);
+    gP->SetLineStyle(11);
+    gP->Draw("L same");
+
+    // the match window, at the stub's radius, centred on the prediction
+    const double vP = Vpred(rHit) + shift;
+    auto* wb = new TBox(vP - win, rHit - 0.07, vP + win, rHit + 0.07);
+    wb->SetFillColorAlpha(kOrange + 7, 0.75);
+    wb->Draw();
+
+    const double miss = std::abs(vP - (Vtrue(rHit) + shift));
+    auto* mk = new TMarker(Vtrue(rHit) + shift, rHit, 20);
+    mk->SetMarkerSize(2.0);
+    mk->SetMarkerColor(miss < win ? kGreen + 3 : kGray + 3);
+    mk->Draw();
+    if (miss >= win) {
+      auto* xx = new TMarker(Vtrue(rHit) + shift, rHit, 5);
+      xx->SetMarkerColor(kRed + 2);
+      xx->SetMarkerSize(2.4);
+      xx->Draw();
+    }
+    auto* ar = new TArrow(Vtrue(rHit) + shift, rHit, vP, rHit, 0.012, "<|>");
+    ar->SetLineColor(miss < win ? kGreen + 3 : kRed + 2);
+    ar->SetFillColor(miss < win ? kGreen + 3 : kRed + 2);
+    ar->SetLineWidth(2);
+    ar->Draw();
+
+    an.SetTextColor(miss < win ? kGreen + 3 : kRed + 2);
+    an.SetTextAlign(23);
+    an.DrawLatex(0.5 * (Vtrue(rHit) + shift + vP), rHit - 0.42,
+                 Form("%.1f mm %s", miss * 10., miss < win ? "- matched" : "- lost"));
+    an.SetTextColor(kRed + 1);
+    an.SetTextAlign(k == 0 ? 32 : 12);
+    an.DrawLatex(shift + (k == 0 ? -0.25 : 0.25), rm + 0.28, k == 0 ? "track A" : "track B");
+  }
+
+  an.SetTextColor(kGray + 3);
+  an.SetTextAlign(12);
+  an.DrawLatex(vLo + 0.25, 0.5 * (kSensor[0] + kSensor[1]) - 0.75, "inner ladder");
+  an.SetTextAlign(32);
+  an.DrawLatex(vHi - 0.25, 0.5 * (kSensor[2] + kSensor[3]) + 0.75, "outer ladder");
+  an.SetTextColor(kGray + 2);
+  an.SetTextAlign(12);
+  an.DrawLatex(vLo + 0.25, rm + 0.25, "r_{mean}");
+
+  auto* leg = new TLegend(0.075, 0.845, 0.98, 0.925);
+  leg->SetBorderSize(0);
+  leg->SetFillStyle(0);
+  leg->SetNColumns(3);
+  leg->SetMargin(0.10);
+  leg->SetTextSize(0.0295);
+  auto* lt = new TLine();
+  lt->SetLineColor(kRed + 1);
+  lt->SetLineWidth(4);
+  auto* lp = new TLine();
+  lp->SetLineColor(kOrange + 8);
+  lp->SetLineWidth(3);
+  lp->SetLineStyle(11);
+  auto* lw = new TBox();
+  lw->SetFillColorAlpha(kOrange + 7, 0.75);
+  leg->AddEntry(lt, "true helix, and its stub", "l");
+  leg->AddEntry(lp, "the straight line the algorithm predicts", "l");
+  leg->AddEntry(lw, Form("#pm%.1f mm match window", kWindow[layer]), "f");
+  leg->Draw();
+
+  TLatex hd;
+  hd.SetNDC();
+  hd.SetTextSize(0.034);
+  hd.SetTextAlign(12);
+  hd.DrawLatex(0.075, 0.955, Form("L%d, p_{T} = %.2f GeV #minus transverse plane, drawn to scale", layer + 1, pt));
+
+  Save(c, out);
+}
+
 }  // namespace
 
 void plot_projection_error(int which = 0) {
@@ -549,6 +707,10 @@ void plot_projection_error(int which = 0) {
   }
   if (which == 0 || which == 4)
     FigSlope("../figures/projection_slope");
+  if (which == 0 || which == 5) {
+    FigTransverse("../figures/projection_transverse", 0.60);
+    FigTransverse("../figures/projection_transverse_0p8", 0.80);
+  }
 
   if (which == 0) {
     printf("\nprojection error [mm], 3rd order, against the window\n%8s", "pT");
