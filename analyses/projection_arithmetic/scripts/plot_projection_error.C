@@ -549,11 +549,16 @@ void FigSlope(const char* out, int layer = 3) {
 // drawn to scale in the plane.
 // ---------------------------------------------------------------------------
 void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
-  auto* c = new TCanvas("ctr", "", 1200, 700);
-  c->SetLeftMargin(0.085);
-  c->SetRightMargin(0.02);
-  c->SetBottomMargin(0.115);
-  c->SetTopMargin(0.115);
+  auto* c = new TCanvas("ctr", "", 1560, 700);
+  auto* pOv = new TPad("pOv", "", 0.000, 0.0, 0.355, 1.0);
+  auto* pZm = new TPad("pZm", "", 0.355, 0.0, 1.000, 1.0);
+  pOv->Draw();
+  pZm->Draw();
+  pZm->cd();
+  gPad->SetLeftMargin(0.085);
+  gPad->SetRightMargin(0.025);
+  gPad->SetBottomMargin(0.115);
+  gPad->SetTopMargin(0.115);
 
   const double kSensor[4] = {66.80, 67.25, 69.97, 70.41};
   const double rm = kRmean[layer], rinv = kCurv / pt, x0 = 0.5 * rm * rinv;
@@ -721,6 +726,82 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
   leg->AddEntry(lw, Form("#pm%.1f mm match window", kWindow[layer]), "l");
   leg->AddEntry((TObject*)nullptr, Form("L%d,  p_{T} = %.2f GeV", layer + 1, pt), "");
   leg->Draw();
+
+  // ---- overview: the same two tracks, all the way from the beam line
+  pOv->cd();
+  gPad->SetLeftMargin(0.155);
+  gPad->SetRightMargin(0.03);
+  gPad->SetBottomMargin(0.115);
+  gPad->SetTopMargin(0.115);
+  // rotate the overview so the arc sits in the quadrant; the physics is the
+  // same, only the choice of where phi = 0 points
+  const double rot = 0.78;
+  const double OV = 86.;
+  auto* fo = gPad->DrawFrame(-7., -7., OV, OV);
+  fo->GetXaxis()->SetTitle("x  [cm]");
+  fo->GetYaxis()->SetTitle("y  [cm]");
+  fo->GetXaxis()->SetTitleSize(0.046);
+  fo->GetYaxis()->SetTitleSize(0.046);
+  fo->GetXaxis()->SetLabelSize(0.040);
+  fo->GetYaxis()->SetLabelSize(0.040);
+  fo->GetYaxis()->SetTitleOffset(1.30);
+
+  for (int i = 0; i < 6; ++i) {  // the barrel layers
+    auto* arc = new TArc(0, 0, kRmean[i], -4, 92);
+    arc->SetFillStyle(0);
+    arc->SetLineColor(kGray + 1);
+    arc->SetLineStyle(3);
+    arc->Draw("only");
+  }
+  for (int k = 0; k < 2; ++k) {
+    const double phi0 = (k == 0) ? phi0A : phi0B;
+    auto* g = new TGraph();
+    for (double r = 0; r <= 1.999 / rinv && r <= 95.; r += 0.5) {
+      double ph = phi0 - std::asin(0.5 * r * rinv) + rot;
+      g->SetPoint(g->GetN(), r * std::cos(ph), r * std::sin(ph));
+    }
+    g->SetLineColor(kRed + 1);
+    g->SetLineWidth(3);
+    g->Draw("L same");
+    // the direction at the beam line -- the slope the algorithm keeps using
+    auto* tg = new TLine(0, 0, 36. * std::cos(phi0 + rot), 36. * std::sin(phi0 + rot));
+    tg->SetLineColor(kOrange + 8);
+    tg->SetLineWidth(3);
+    tg->SetLineStyle(11);
+    tg->Draw();
+  }
+  auto* ip = new TMarker(0, 0, 20);
+  ip->SetMarkerSize(1.5);
+  ip->SetMarkerColor(kBlack);
+  ip->Draw();
+
+  auto* zb = new TGraph();  // the patch shown on the right
+  for (double v = vLo; v <= vHi; v += 0.5)
+    zb->SetPoint(zb->GetN(), rLo * std::cos(v / rm + rot), rLo * std::sin(v / rm + rot));
+  for (double r = rLo; r <= rHi; r += 0.5)
+    zb->SetPoint(zb->GetN(), r * std::cos(vHi / rm + rot), r * std::sin(vHi / rm + rot));
+  for (double v = vHi; v >= vLo; v -= 0.5)
+    zb->SetPoint(zb->GetN(), rHi * std::cos(v / rm + rot), rHi * std::sin(v / rm + rot));
+  for (double r = rHi; r >= rLo; r -= 0.5)
+    zb->SetPoint(zb->GetN(), r * std::cos(vLo / rm + rot), r * std::sin(vLo / rm + rot));
+  zb->SetPoint(zb->GetN(), zb->GetX()[0], zb->GetY()[0]);
+  zb->SetLineColor(kAzure + 2);
+  zb->SetLineWidth(3);
+  zb->Draw("L same");
+
+  TLatex ov;
+  ov.SetTextSize(0.040);
+  ov.SetTextAlign(12);
+  ov.SetTextColor(kBlack);
+  ov.DrawLatex(2.5, -3.5, "beam line");
+  ov.SetTextColor(kAzure + 2);
+  ov.SetTextAlign(32);
+  ov.DrawLatex(60., 36., "shown at right");
+  ov.SetTextColor(kOrange + 9);
+  ov.SetTextAlign(12);
+  ov.DrawLatex(21., 31., "direction at the beam line");
+  ov.DrawLatex(21., 26., "= the slope the algorithm");
+  ov.DrawLatex(21., 21., "uses out at the layer");
 
   Save(c, out);
 }
