@@ -276,6 +276,11 @@ void FigInLayer(const char* out, double pt = 0.80, int layer = 3) {
     return (-asin3(x0) + (r - rm) * derApprox + std::asin(0.5 * r * rinv)) * rm * 10.;
   };
 
+  // the error grows steeply as pT falls, so scale the frame with it and place
+  // the labels as fractions of the range rather than at fixed millimetres
+  const double yTop = std::max(5.3, Pred(hi) + win + 0.6);
+  const double yBot = -0.45 * yTop;
+
   // Two tracks at different azimuth, each crossing one ladder. Each panel is
   // drawn in the frame of its own track, so that track is the line y = 0.
   for (int which = 0; which < 2; ++which) {
@@ -285,7 +290,7 @@ void FigInLayer(const char* out, double pt = 0.80, int layer = 3) {
     gPad->SetBottomMargin(0.125);
     gPad->SetTopMargin(0.085);
 
-    auto* fr = gPad->DrawFrame(lo, -4.3, hi, 5.3);
+    auto* fr = gPad->DrawFrame(lo, yBot, hi, yTop);
     fr->GetXaxis()->SetTitle("r  [cm]   (radially outward #rightarrow)");
     fr->GetXaxis()->SetTitleSize(0.047);
     fr->GetXaxis()->SetLabelSize(0.042);
@@ -298,15 +303,15 @@ void FigInLayer(const char* out, double pt = 0.80, int layer = 3) {
 
     for (int m = 0; m < 2; ++m) {  // both ladders; the crossed one is solid
       const bool hit = (m == which);
-      auto* mod = new TBox(kSensor[2 * m] - 0.06, -2.45, kSensor[2 * m + 1] + 0.06, 5.3);
+      auto* mod = new TBox(kSensor[2 * m] - 0.06, 0.62 * yBot, kSensor[2 * m + 1] + 0.06, yTop);
       mod->SetFillColorAlpha(kGray + 1, hit ? 0.30 : 0.10);
       mod->Draw();
       for (int i = 0; i < 2; ++i) {
-        auto* sb = new TBox(kSensor[2 * m + i] - 0.022, -2.45, kSensor[2 * m + i] + 0.022, 5.3);
+        auto* sb = new TBox(kSensor[2 * m + i] - 0.022, 0.62 * yBot, kSensor[2 * m + i] + 0.022, yTop);
         sb->SetFillColorAlpha(kGray + 3, hit ? 0.75 : 0.22);
         sb->Draw();
       }
-      auto* mb = new TBox(kSensor[2 * m] - 0.06, -2.78, kSensor[2 * m + 1] + 0.06, -2.58);
+      auto* mb = new TBox(kSensor[2 * m] - 0.06, 0.705 * yBot, kSensor[2 * m + 1] + 0.06, 0.655 * yBot);
       mb->SetFillColorAlpha(kGray + 2, hit ? 0.7 : 0.22);
       mb->Draw();
     }
@@ -332,7 +337,7 @@ void FigInLayer(const char* out, double pt = 0.80, int layer = 3) {
     trk->SetLineWidth(4);
     trk->Draw();
 
-    auto* vm = new TLine(rm, -3.5, rm, 5.3);
+    auto* vm = new TLine(rm, 0.88 * yBot, rm, yTop);
     vm->SetLineStyle(3);
     vm->SetLineColor(kGray + 2);
     vm->Draw();
@@ -361,9 +366,9 @@ void FigInLayer(const char* out, double pt = 0.80, int layer = 3) {
     an.SetTextAlign(22);
     an.SetTextColor(kGray + 3);
     for (int m = 0; m < 2; ++m)
-      an.DrawLatex(0.5 * (kSensor[2 * m] + kSensor[2 * m + 1]), -3.30, m == 0 ? "inner ladder" : "outer ladder");
+      an.DrawLatex(0.5 * (kSensor[2 * m] + kSensor[2 * m + 1]), 0.80 * yBot, m == 0 ? "inner ladder" : "outer ladder");
     an.SetTextColor(kGray + 2);
-    an.DrawLatex(rm, -4.05, "r_{mean}");
+    an.DrawLatex(rm, 0.95 * yBot, "r_{mean}");
     an.SetTextSize(0.043);
     an.SetTextColor(ok ? kGreen + 3 : kRed + 2);
     an.SetTextAlign(which == 0 ? 12 : 32);
@@ -372,11 +377,11 @@ void FigInLayer(const char* out, double pt = 0.80, int layer = 3) {
     an.SetTextSize(0.044);
     an.SetTextColor(kBlack);
     an.SetTextAlign(12);
-    an.DrawLatex(lo + 0.15, 4.75,
+    an.DrawLatex(lo + 0.15, 0.90 * yTop,
                  which == 0 ? "track A, crossing the inner ladder" : "track B, crossing the outer ladder");
     an.SetTextSize(0.036);
     an.SetTextColor(kGray + 3);
-    an.DrawLatex(lo + 0.15, 3.95, Form("dr = %+.2f cm", rs - rm));
+    an.DrawLatex(lo + 0.15, 0.785 * yTop, Form("dr = %+.2f cm", rs - rm));
 
   }
 
@@ -538,8 +543,10 @@ void plot_projection_error(int which = 0) {
     FigGeometry("../figures/projection_geometry");
   if (which == 0 || which == 2)
     FigVsPt("../figures/projection_error_vs_pt");
-  if (which == 0 || which == 3)
-    FigInLayer("../figures/projection_error_in_layer");
+  if (which == 0 || which == 3) {
+    FigInLayer("../figures/projection_error_in_layer", 0.80);
+    FigInLayer("../figures/projection_error_in_layer_0p6", 0.60);
+  }
   if (which == 0 || which == 4)
     FigSlope("../figures/projection_slope");
 
