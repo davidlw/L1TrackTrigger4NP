@@ -550,144 +550,162 @@ void FigSlope(const char* out, int layer = 3) {
 // ---------------------------------------------------------------------------
 void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
   auto* c = new TCanvas("ctr", "", 1200, 700);
-  c->SetLeftMargin(0.075);
+  c->SetLeftMargin(0.085);
   c->SetRightMargin(0.02);
   c->SetBottomMargin(0.115);
-  c->SetTopMargin(0.165);
+  c->SetTopMargin(0.115);
 
   const double kSensor[4] = {66.80, 67.25, 69.97, 70.41};
   const double rm = kRmean[layer], rinv = kCurv / pt, x0 = 0.5 * rm * rinv;
   const double win = kWindow[layer] / 10.;  // cm
 
-  // azimuthal arc of the TRUE track, measured from its own crossing of rmean
-  auto Vtrue = [&](double r) { return rm * (std::asin(x0) - std::asin(0.5 * r * rinv)); };
-  // ... and of the straight line the algorithm predicts
-  auto Vpred = [&](double r) { return rm * (std::asin(x0) - asin3(x0) - (r - rm) * 0.5 * rinv); };
+  // A genuine 2D patch of the transverse plane, rotated so that the azimuth at
+  // the centre of the view points "up". Layer surfaces therefore curve, and two
+  // tracks from the same origin fan apart instead of looking like copies.
+  const double phiC = 0.;
+  auto X = [&](double r, double phi) { return r * std::cos(phi - phiC); };  // radial
+  auto Y = [&](double r, double phi) { return r * std::sin(phi - phiC); };  // azimuthal
 
-  const double vLo = -4.2, vHi = 9.3, rLo = 65.5, rHi = 71.7;
+  const double vLo = -4.6, vHi = 9.3, rLo = 65.3, rHi = 71.7;
   auto* fr = gPad->DrawFrame(vLo, rLo, vHi, rHi);
-  fr->GetXaxis()->SetTitle("azimuthal arc  r#Delta#phi  [cm]");
-  fr->GetYaxis()->SetTitle("r  [cm]");
+  fr->GetXaxis()->SetTitle("azimuthal direction  [cm]");
+  fr->GetYaxis()->SetTitle("radial direction  [cm]");
   fr->GetXaxis()->SetTitleSize(0.046);
   fr->GetYaxis()->SetTitleSize(0.046);
   fr->GetXaxis()->SetLabelSize(0.040);
   fr->GetYaxis()->SetLabelSize(0.040);
-  fr->GetYaxis()->SetTitleOffset(0.72);
+  fr->GetYaxis()->SetTitleOffset(0.80);
 
-  // the two ladders, adjacent in phi, staggered in radius
-  const double vSplit = 2.0;
-  auto drawModule = [&](double r0, double r1, double va, double vb) {
-    auto* box = new TBox(va, r0, vb, r1);
-    box->SetFillColorAlpha(kGray + 1, 0.30);
-    box->Draw();
-    for (double rr : {r0, r1}) {
-      auto* sl = new TLine(va, rr, vb, rr);
-      sl->SetLineColor(kGray + 3);
-      sl->SetLineWidth(3);
-      sl->Draw();
+  // the two ladders: flat modules, tangent to their circle, staggered in phi
+  auto drawModule = [&](double r0, double r1, double phiM, double halfLen) {
+    auto* g = new TGraph();
+    for (int i : {0, 1, 1, 0}) {
+      double rr = i ? r1 : r0;
+      for (int k = 0; k < 2; ++k) {
+        double d = (i == 0 ? (k == 0 ? -1 : 1) : (k == 0 ? 1 : -1)) * halfLen;
+        double px = rr * std::cos(phiM) - d * std::sin(phiM);
+        double py = rr * std::sin(phiM) + d * std::cos(phiM);
+        double rp = std::hypot(px, py), pp = std::atan2(py, px);
+        g->SetPoint(g->GetN(), Y(rp, pp), X(rp, pp));
+      }
+      break;
     }
+    g->Set(0);
+    const double corner[4][2] = {{r0, -halfLen}, {r0, halfLen}, {r1, halfLen}, {r1, -halfLen}};
+    for (auto& cn : corner) {
+      double px = cn[0] * std::cos(phiM) - cn[1] * std::sin(phiM);
+      double py = cn[0] * std::sin(phiM) + cn[1] * std::cos(phiM);
+      double rp = std::hypot(px, py), pp = std::atan2(py, px);
+      g->SetPoint(g->GetN(), Y(rp, pp), X(rp, pp));
+    }
+    g->SetPoint(g->GetN(), g->GetX()[0], g->GetY()[0]);
+    g->SetFillColorAlpha(kGray + 1, 0.30);
+    g->SetLineColor(kGray + 3);
+    g->SetLineWidth(3);
+    g->Draw("F same");
+    g->Draw("L same");
   };
-  drawModule(kSensor[0], kSensor[1], vLo, vSplit + 0.25);   // inner ladder
-  drawModule(kSensor[2], kSensor[3], vSplit - 0.25, vHi);   // outer ladder
+  drawModule(kSensor[0], kSensor[1], -0.018, 3.6);  // inner ladder
+  drawModule(kSensor[2], kSensor[3], 0.080, 3.9);   // outer ladder
 
-  auto* vmean = new TLine(vLo, rm, vHi, rm);
-  vmean->SetLineStyle(3);
-  vmean->SetLineColor(kGray + 2);
-  vmean->Draw();
+  auto* arcm = new TGraph();  // rmean, which is a circle, not a line
+  for (double t = -0.09; t <= 0.15; t += 0.004)
+    arcm->SetPoint(arcm->GetN(), Y(rm, t), X(rm, t));
+  arcm->SetLineStyle(3);
+  arcm->SetLineColor(kGray + 2);
+  arcm->Draw("L same");
 
   TLatex an;
   an.SetTextSize(0.034);
 
-  // two tracks: A crosses the inner ladder, B the outer one
-  const double vHitA = -0.6, vHitB = 5.6;
-  const double rHitA = kSensor[0], rHitB = kSensor[2];
+  // two tracks from the same origin, at different azimuth
+  const double vA = -0.6, vB = 5.6;
+  const double phi0A = vA / rm + std::asin(0.5 * kSensor[0] * rinv);
+  const double phi0B = vB / rm + std::asin(0.5 * kSensor[2] * rinv);
   for (int k = 0; k < 2; ++k) {
-    const double rHit = (k == 0) ? rHitA : rHitB;
-    const double shift = ((k == 0) ? vHitA : vHitB) - Vtrue(rHit);
+    const double phi0 = (k == 0) ? phi0A : phi0B;
+    const double rHit = (k == 0) ? kSensor[0] : kSensor[2];
+    auto PhiT = [&](double r) { return phi0 - std::asin(0.5 * r * rinv); };
+    auto PhiP = [&](double r) { return phi0 - asin3(x0) - (r - rm) * 0.5 * rinv; };
 
     auto* gT = new TGraph();
-    for (double r = rLo; r <= rHi; r += 0.25)
-      gT->SetPoint(gT->GetN(), Vtrue(r) + shift, r);
+    for (double r = rLo - 1.5; r <= rHi + 1.0; r += 0.2)
+      gT->SetPoint(gT->GetN(), Y(r, PhiT(r)), X(r, PhiT(r)));
     gT->SetLineColor(kRed + 1);
     gT->SetLineWidth(4);
     gT->Draw("L same");
 
     auto* gP = new TGraph();
-    for (double r = rLo; r <= rHi; r += 0.62)
-      gP->SetPoint(gP->GetN(), Vpred(r) + shift, r);
+    for (double r = rLo - 0.5; r <= rHi + 0.5; r += 0.55)
+      gP->SetPoint(gP->GetN(), Y(r, PhiP(r)), X(r, PhiP(r)));
     gP->SetLineColor(kOrange + 8);
     gP->SetLineWidth(3);
     gP->SetLineStyle(11);
     gP->Draw("L same");
 
-    // the match window, at the stub's radius, centred on the prediction
-    const double vP = Vpred(rHit) + shift;
-    auto* wb = new TBox(vP - win, rHit - 0.07, vP + win, rHit + 0.07);
-    wb->SetFillColorAlpha(kOrange + 7, 0.75);
-    wb->Draw();
-
-    const double miss = std::abs(vP - (Vtrue(rHit) + shift));
-    auto* mk = new TMarker(Vtrue(rHit) + shift, rHit, 20);
+    const double miss = (PhiP(rHit) - PhiT(rHit)) * rHit;
+    auto* mk = new TMarker(Y(rHit, PhiT(rHit)), X(rHit, PhiT(rHit)), 20);
     mk->SetMarkerSize(2.0);
-    mk->SetMarkerColor(miss < win ? kGreen + 3 : kGray + 3);
+    mk->SetMarkerColor(std::abs(miss) < win ? kGreen + 3 : kGray + 3);
     mk->Draw();
-    if (miss >= win) {
-      auto* xx = new TMarker(Vtrue(rHit) + shift, rHit, 5);
+    if (std::abs(miss) >= win) {
+      auto* xx = new TMarker(Y(rHit, PhiT(rHit)), X(rHit, PhiT(rHit)), 5);
       xx->SetMarkerColor(kRed + 2);
       xx->SetMarkerSize(2.4);
       xx->Draw();
     }
-    auto* ar = new TArrow(Vtrue(rHit) + shift, rHit, vP, rHit, 0.012, "<|>");
-    ar->SetLineColor(miss < win ? kGreen + 3 : kRed + 2);
-    ar->SetFillColor(miss < win ? kGreen + 3 : kRed + 2);
+
+    auto* gw = new TGraph();  // the window, an arc at the stub radius
+    for (double d = -win; d <= win + 1e-9; d += 2 * win / 12)
+      gw->SetPoint(gw->GetN(), Y(rHit, PhiP(rHit) + d / rHit), X(rHit, PhiP(rHit) + d / rHit));
+    gw->SetLineColor(kOrange + 7);
+    gw->SetLineWidth(9);
+    gw->Draw("L same");
+
+    auto* ar = new TArrow(Y(rHit, PhiT(rHit)), X(rHit, PhiT(rHit)), Y(rHit, PhiP(rHit)), X(rHit, PhiP(rHit)), 0.011,
+                          "<|>");
+    ar->SetLineColor(std::abs(miss) < win ? kGreen + 3 : kRed + 2);
+    ar->SetFillColor(std::abs(miss) < win ? kGreen + 3 : kRed + 2);
     ar->SetLineWidth(2);
     ar->Draw();
+    an.SetTextColor(std::abs(miss) < win ? kGreen + 3 : kRed + 2);
+    an.SetTextAlign(32);
+    an.DrawLatex(Y(rHit, PhiT(rHit)) - 0.30, X(rHit, PhiT(rHit)),
+                 Form("%.1f mm %s", std::abs(miss) * 10., std::abs(miss) < win ? "- matched" : "- lost"));
 
-    an.SetTextColor(miss < win ? kGreen + 3 : kRed + 2);
-    an.SetTextAlign(23);
-    an.DrawLatex(0.5 * (Vtrue(rHit) + shift + vP), rHit - 0.42,
-                 Form("%.1f mm %s", miss * 10., miss < win ? "- matched" : "- lost"));
-    // the line is anchored at rmean -- a radius with no module on it -- and is
-    // already displaced there by the series truncation; from that point it is
-    // extended with the small-angle slope.
-    auto* anch = new TMarker(Vpred(rm) + shift, rm, 21);
+    // the anchor: the one radius at which the projection is evaluated
+    auto* anch = new TMarker(Y(rm, PhiP(rm)), X(rm, PhiP(rm)), 21);
     anch->SetMarkerColor(kOrange + 8);
     anch->SetMarkerSize(1.6);
     anch->Draw();
-    if (k == 0) {
-      auto* aser = new TArrow(Vtrue(rm) + shift, rm, Vpred(rm) + shift, rm, 0.011, "<|>");
-      aser->SetLineColor(kOrange + 9);
-      aser->SetFillColor(kOrange + 9);
-      aser->SetLineWidth(2);
-      aser->Draw();
-      an.SetTextColor(kOrange + 9);
-      an.SetTextAlign(23);
-      an.DrawLatex(0.5 * (Vtrue(rm) + Vpred(rm)) + shift, rm - 0.18,
-                   Form("series error, %.1f mm", (Vpred(rm) - Vtrue(rm)) * 10.));
-      an.SetTextAlign(12);
-      an.DrawLatex(Vpred(rm) + shift + 0.22, rm + 0.42, "line starts here, at r_{mean}");
-    }
 
     an.SetTextColor(kRed + 1);
-    an.SetTextAlign(k == 0 ? 32 : 32);
-    an.DrawLatex(Vtrue(rLo + 0.25) + shift - 0.22, rLo + 0.30, k == 0 ? "track A" : "track B");
+    an.SetTextAlign(32);
+    an.DrawLatex(Y(rLo + 0.3, PhiT(rLo + 0.3)) - 0.25, rLo + 0.38, k == 0 ? "track A" : "track B");
   }
 
+  // both tracks come from the beam line, far below this patch
+  auto* aip = new TArrow(vLo + 1.35, rLo + 0.80, vLo + 0.75, rLo + 0.22, 0.012, "|>");
+  aip->SetLineColor(kGray + 3);
+  aip->SetFillColor(kGray + 3);
+  aip->SetLineWidth(2);
+  aip->Draw();
   an.SetTextColor(kGray + 3);
   an.SetTextAlign(12);
-  an.DrawLatex(vLo + 0.25, 0.5 * (kSensor[0] + kSensor[1]) - 0.75, "inner ladder");
-  an.SetTextAlign(32);
-  an.DrawLatex(vHi - 0.25, 0.5 * (kSensor[2] + kSensor[3]) + 0.75, "outer ladder");
-  an.SetTextColor(kGray + 2);
+  an.DrawLatex(vLo + 1.55, rLo + 0.80, "to the beam line");
   an.SetTextAlign(12);
-  an.DrawLatex(vLo + 0.25, rm + 0.25, "r_{mean}");
+  an.DrawLatex(vLo + 0.25, rm + 0.28, "r_{mean}");
+  an.SetTextAlign(12);
+  an.DrawLatex(vLo + 0.25, 0.5 * (kSensor[0] + kSensor[1]) + 1.05, "inner ladder");
+  an.SetTextAlign(32);
+  an.DrawLatex(vHi - 0.25, 0.5 * (kSensor[2] + kSensor[3]) + 0.95, "outer ladder");
 
-  auto* leg = new TLegend(0.075, 0.845, 0.98, 0.925);
+  auto* leg = new TLegend(0.085, 0.885, 0.98, 0.965);
   leg->SetBorderSize(0);
   leg->SetFillStyle(0);
-  leg->SetNColumns(3);
+  leg->SetNColumns(4);
   leg->SetMargin(0.10);
-  leg->SetTextSize(0.0295);
+  leg->SetTextSize(0.029);
   auto* lt = new TLine();
   lt->SetLineColor(kRed + 1);
   lt->SetLineWidth(4);
@@ -695,18 +713,14 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
   lp->SetLineColor(kOrange + 8);
   lp->SetLineWidth(3);
   lp->SetLineStyle(11);
-  auto* lw = new TBox();
-  lw->SetFillColorAlpha(kOrange + 7, 0.75);
+  auto* lw = new TLine();
+  lw->SetLineColor(kOrange + 7);
+  lw->SetLineWidth(9);
   leg->AddEntry(lt, "true helix, and its stub", "l");
-  leg->AddEntry(lp, "the straight line the algorithm predicts", "l");
-  leg->AddEntry(lw, Form("#pm%.1f mm match window", kWindow[layer]), "f");
+  leg->AddEntry(lp, "the line the algorithm predicts", "l");
+  leg->AddEntry(lw, Form("#pm%.1f mm match window", kWindow[layer]), "l");
+  leg->AddEntry((TObject*)nullptr, Form("L%d,  p_{T} = %.2f GeV", layer + 1, pt), "");
   leg->Draw();
-
-  TLatex hd;
-  hd.SetNDC();
-  hd.SetTextSize(0.034);
-  hd.SetTextAlign(12);
-  hd.DrawLatex(0.075, 0.955, Form("L%d, p_{T} = %.2f GeV #minus transverse plane, drawn to scale", layer + 1, pt));
 
   Save(c, out);
 }
