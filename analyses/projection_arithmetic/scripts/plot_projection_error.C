@@ -99,9 +99,9 @@ void FigGeometry(const char* out) {
   gT->SetLineColor(kRed + 1);
   gT->SetLineWidth(4);
   gT->Draw("L same");
-  gA->SetLineColor(kOrange + 7);
-  gA->SetLineWidth(4);
-  gA->SetLineStyle(9);
+  gA->SetLineColor(kRed + 1);
+  gA->SetLineWidth(2);
+  gA->SetLineStyle(2);
   gA->Draw("L same");
 
   auto* mx = new TMarker(0, reach, 29);  // the turning point, x = 1
@@ -119,9 +119,9 @@ void FigGeometry(const char* out) {
   gT2->SetLineColor(kAzure + 2);
   gT2->SetLineWidth(3);
   gT2->Draw("L same");
-  gA2->SetLineColor(kAzure - 2);
-  gA2->SetLineWidth(3);
-  gA2->SetLineStyle(9);
+  gA2->SetLineColor(kAzure + 2);
+  gA2->SetLineWidth(2);
+  gA2->SetLineStyle(2);
   gA2->Draw("L same");
 
   auto *mT = new TGraph(), *mA = new TGraph();  // the layer crossings
@@ -138,8 +138,8 @@ void FigGeometry(const char* out) {
   mT->Draw("P same");
   mA->SetMarkerStyle(24);
   mA->SetMarkerSize(2.3);
-  mA->SetMarkerColor(kOrange + 7);
-  mA->SetLineWidth(3);
+  mA->SetMarkerColor(kRed + 1);
+  mA->SetLineWidth(2);
   mA->Draw("P same");
 
   auto* leg = new TLegend(0.355, 0.655, 0.985, 0.915);
@@ -264,8 +264,8 @@ void FigInLayer(const char* out, double pt = 0.7, int layer = 3) {
   vm->Draw();
 
   gSlope->SetLineColor(kAzure + 2);
-  gSlope->SetLineWidth(4);
-  gSlope->SetLineStyle(9);
+  gSlope->SetLineWidth(3);
+  gSlope->SetLineStyle(2);
   gSlope->Draw("L same");
   gBoth->SetLineColor(kRed + 1);
   gBoth->SetLineWidth(4);
@@ -284,10 +284,6 @@ void FigInLayer(const char* out, double pt = 0.7, int layer = 3) {
   tx.SetTextSize(0.038);
   tx.DrawLatex(0.13, 0.945, Form("Inside L%d, p_{T} = %.1f GeV", layer + 1, pt));
   tx.SetTextSize(0.029);
-  tx.SetTextColor(kGray + 3);
-  tx.DrawLatex(0.56, 0.84, "dashed grey: #pm match window");
-  tx.DrawLatex(0.56, 0.79, "offset at r_{mean}  = the series");
-  tx.DrawLatex(0.56, 0.74, "tilt across the layer = the slope");
   tx.SetTextColor(kGray + 2);
   tx.DrawLatex(0.455, 0.355, "r_{mean}");
   Save(c, out);
