@@ -62,7 +62,7 @@ void FigGeometry(const char* out) {
   c->SetBottomMargin(0.11);
   c->SetTopMargin(0.08);
 
-  auto* fr = gPad->DrawFrame(0, -6, 120, 120);
+  auto* fr = gPad->DrawFrame(0, -12, 120, 116);
   fr->GetXaxis()->SetTitle("x [cm]");
   fr->GetYaxis()->SetTitle("y [cm]");
   fr->GetYaxis()->SetTitleOffset(1.25);
@@ -104,11 +104,6 @@ void FigGeometry(const char* out) {
   gA->SetLineStyle(11);
   gA->Draw("L same");
 
-  auto* mx = new TMarker(0, reach, 29);  // the turning point, x = 1
-  mx->SetMarkerColor(kRed - 3);
-  mx->SetMarkerSize(2.2);
-  mx->Draw();
-
   const double rinvB = kCurv / 2.0;  // 2 GeV, for contrast
   auto *gT2 = new TGraph(), *gA2 = new TGraph();
   for (double r = 0; r <= 118; r += 3.0) {
@@ -142,16 +137,37 @@ void FigGeometry(const char* out) {
   mA->SetLineWidth(2);
   mA->Draw("P same");
 
-  auto* leg = new TLegend(0.355, 0.655, 0.985, 0.915);
+  // phi0 is the track direction at the beam line; the projection swings away
+  // from it by asin(x). Draw both, using L4 as the illustration.
+  const double xL4 = 0.5 * kRmean[3] * rinvA, aL4 = std::asin(xL4);
+  auto* ray = new TLine(0, 0, kRmean[3] * std::cos(aL4), kRmean[3] * std::sin(aL4));
+  ray->SetLineColor(kGray + 2);
+  ray->SetLineStyle(3);
+  ray->Draw();
+  auto* ar = new TArrow(0, 0, 30, 0, 0.018, "|>");
+  ar->SetLineColor(kGray + 3);
+  ar->SetLineWidth(2);
+  ar->SetFillColor(kGray + 3);
+  ar->Draw();
+  auto* sweep = new TArc(0, 0, 21, 0, aL4 * TMath::RadToDeg());
+  sweep->SetFillStyle(0);
+  sweep->SetLineColor(kGray + 3);
+  sweep->Draw("only");
+  TLatex an;
+  an.SetTextColor(kGray + 3);
+  an.SetTextSize(0.034);
+  an.DrawLatex(31, -1.5, "#phi_{0}");
+  an.SetTextSize(0.030);
+  an.DrawLatex(23.5, 11.0, "asin(x)");
+
+  auto* leg = new TLegend(0.355, 0.735, 0.985, 0.915);
   leg->SetBorderSize(0);
   leg->SetFillStyle(0);
   leg->SetTextSize(0.0262);
-  leg->SetHeader("x = r #upoint r_{inv}/2 = r / 2R   (1 at the turning point)");
+  leg->SetHeader("x = r #upoint r_{inv}/2 = r / 2R");
   leg->AddEntry(gT, "0.5 GeV, true helix   #phi_{0} #minus asin(x)", "l");
   leg->AddEntry(gA, "0.5 GeV, as projected   #phi_{0} #minus (x + x^{3}/6)", "l");
-  leg->AddEntry(mA, "layer crossings: true #bullet / projected #circ", "p");
   leg->AddEntry(gT2, "2 GeV, true and projected (same curve)", "l");
-  leg->AddEntry(mx, Form("turning point: 2R = %.0f cm, x = 1", reach), "p");
   leg->Draw();
 
   TLatex tx;
