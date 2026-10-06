@@ -785,22 +785,6 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
     g->SetLineWidth(3);
     g->Draw("L same");
 
-    // Each layer is projected to separately, so what to draw is the LOCUS of
-    // those projections: phi0 - (x + x^3/6) evaluated at every radius. It
-    // passes through the predicted position for every layer at once.
-    auto* gp = new TGraph();
-    for (double r = 0; r <= 1.999 / rinv && r <= 95.; r += 3.0) {
-      double xx = 0.5 * r * rinv;
-      if (xx >= 1.)
-        break;
-      double ph = phi0 - asin3(xx) + rot;
-      gp->SetPoint(gp->GetN(), r * std::cos(ph), r * std::sin(ph));
-    }
-    gp->SetLineColor(kOrange + 8);
-    gp->SetLineWidth(3);
-    gp->SetLineStyle(11);
-    gp->Draw("L same");
-
     if (k == 0) {  // the seed stubs, and where the seed then projects
       for (int L = 0; L < 6; ++L) {
         // a stub sits on a ladder, never at rmean; take the inner one
@@ -822,8 +806,25 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
           ring->Draw();
           continue;
         }
-        auto* mp = new TMarker(rs * std::cos(pp_), rs * std::sin(pp_), 21);
-        mp->SetMarkerSize(1.3);
+        // the linear extension itself: anchored at rmean, slope -rinv/2, and
+        // evaluated at the stub's radius. Drawn well past the +-3.75 cm it is
+        // used over, so that it reads as the straight line it is.
+        auto* gl = new TGraph();
+        for (double r = kRmean[L] - 9.; r <= kRmean[L] + 9.; r += 1.0) {
+          double ph = phi0 - asin3(xmL) - (r - kRmean[L]) * 0.5 * rinv + rot;
+          gl->SetPoint(gl->GetN(), r * std::cos(ph), r * std::sin(ph));
+        }
+        gl->SetLineColor(kOrange + 8);
+        gl->SetLineWidth(3);
+        gl->Draw("L same");
+        auto* ma = new TMarker(kRmean[L] * std::cos(phi0 - asin3(xmL) + rot),
+                               kRmean[L] * std::sin(phi0 - asin3(xmL) + rot), 21);
+        ma->SetMarkerSize(1.1);
+        ma->SetMarkerColor(kOrange + 8);
+        ma->Draw();
+
+        auto* mp = new TMarker(rs * std::cos(pp_), rs * std::sin(pp_), 22);
+        mp->SetMarkerSize(1.7);
         mp->SetMarkerColor(kOrange + 8);
         mp->Draw();
       }
@@ -885,9 +886,10 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
   ov.SetTextColor(kOrange + 9);
   ov.SetTextAlign(12);
   ov.SetTextSize(0.036);
-  ov.DrawLatex(2., 83., "#odot  seed stubs: they fix r_{inv} and #phi_{0}");
-  ov.DrawLatex(2., 78., "#Box  where the seed projects, layer by layer");
-  ov.DrawLatex(2., 73., "dashed: that locus, #phi_{0} #minus (x + x^{3}/6)");
+  ov.DrawLatex(2., 84., "#odot  the two seed stubs: they fix r_{inv} and #phi_{0}");
+  ov.DrawLatex(2., 79., "#Box  the projection to each layer, taken at r_{mean}");
+  ov.DrawLatex(2., 74., "orange: its linear extension, slope #minusr_{inv}/2");
+  ov.DrawLatex(2., 69., "#Delta  where that lands at the stub's own radius");
 
   Save(c, out);
 }
