@@ -780,18 +780,46 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
     g->SetLineWidth(3);
     g->Draw("L same");
 
-    // the predicted line itself, over the radii where it is actually used:
-    // anchored at rmean, slope -rinv/2. At this scale it lies on the track --
-    // which is why the patch has to be blown up at right.
+    // Each layer is projected to separately, so what to draw is the LOCUS of
+    // those projections: phi0 - (x + x^3/6) evaluated at every radius. It
+    // passes through the predicted position for every layer at once.
     auto* gp = new TGraph();
-    for (double r = 44.; r <= 92.; r += 3.2) {
-      double ph = phi0 - asin3(x0) - (r - rm) * 0.5 * rinv + rot;
+    for (double r = 0; r <= 1.999 / rinv && r <= 95.; r += 3.0) {
+      double xx = 0.5 * r * rinv;
+      if (xx >= 1.)
+        break;
+      double ph = phi0 - asin3(xx) + rot;
       gp->SetPoint(gp->GetN(), r * std::cos(ph), r * std::sin(ph));
     }
     gp->SetLineColor(kOrange + 8);
     gp->SetLineWidth(3);
     gp->SetLineStyle(11);
     gp->Draw("L same");
+
+    if (k == 0) {  // mark the seed stubs and every projection it makes
+      for (int L = 0; L < 6; ++L) {
+        const double xx = 0.5 * kRmean[L] * rinv;
+        if (xx >= 1.)
+          continue;
+        const double pt_ = phi0 - std::asin(xx) + rot, pp_ = phi0 - asin3(xx) + rot;
+        const bool seed = (L < 2);
+        auto* ms = new TMarker(kRmean[L] * std::cos(pt_), kRmean[L] * std::sin(pt_), 20);
+        ms->SetMarkerSize(seed ? 2.0 : 1.4);
+        ms->SetMarkerColor(seed ? kRed + 1 : kRed + 1);
+        ms->Draw();
+        if (seed) {
+          auto* ring = new TMarker(kRmean[L] * std::cos(pt_), kRmean[L] * std::sin(pt_), 24);
+          ring->SetMarkerSize(3.0);
+          ring->SetMarkerColor(kRed + 1);
+          ring->Draw();
+          continue;
+        }
+        auto* mp = new TMarker(kRmean[L] * std::cos(pp_), kRmean[L] * std::sin(pp_), 21);
+        mp->SetMarkerSize(1.3);
+        mp->SetMarkerColor(kOrange + 8);
+        mp->Draw();
+      }
+    }
   }
   {  // theta: the angle between the track and the radial direction where it
     // crosses. 1/sqrt(1-x^2) = sec(theta), and the code uses sec(theta) = 1.
@@ -848,9 +876,10 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
   ov.DrawLatex(40., 65., "shown at right");
   ov.SetTextColor(kOrange + 9);
   ov.SetTextAlign(12);
-  ov.DrawLatex(2., 82., "dashed orange: d#phi/dr held at #minusr_{inv}/2, the value");
-  ov.DrawLatex(2., 77., "for a track crossing radially. The real track is at");
-  ov.DrawLatex(2., 72., "#theta, so it curves more sharply than the assumption.");
+  ov.SetTextSize(0.036);
+  ov.DrawLatex(2., 83., "#odot  seed stubs: they fix r_{inv} and #phi_{0}");
+  ov.DrawLatex(2., 78., "#Box  where the seed projects, layer by layer");
+  ov.DrawLatex(2., 73., "dashed: that locus, #phi_{0} #minus (x + x^{3}/6)");
 
   Save(c, out);
 }
