@@ -199,13 +199,17 @@ arcsine's 3/40, no singularity). Two more terms take the D1 radius error at
 
 ---
 
-## 5. Figure
+## 5. Figures
 
-`figures/projection_error.pdf` — three panels:
+Three standalone figures, each PDF and PNG, all from `scripts/plot_projection_error.C`:
 
-1. the transverse plane, with the true helix and the locus the cubic actually
-   predicts, for 2.0 and 0.5 GeV: they are indistinguishable at 2 GeV and
-   visibly separate at 0.5
-2. the position error versus pT for L3-L6, against the real match windows
-3. inside one layer, separating the series offset at `rmean` from the tilt
-   introduced by the wrong slope
+| file | what it shows |
+|---|---|
+| `projection_geometry` | the transverse plane for a 0.5 GeV track: the true helix, the locus the cubic predicts, the layer crossings of each, and the turning point at `x = 1`. A 2 GeV track is overlaid, where the two curves coincide. This is the figure that defines `x` geometrically: `x = r/2R`. |
+| `projection_error_vs_pt` | the position error versus pT for L3-L6, against the real `rphimatchcut_` windows. Where a curve crosses its own dotted line, that layer stops matching. |
+| `projection_error_in_layer` | inside L4 at 0.7 GeV, separating the two errors: the vertical offset at `rmean` is the series, the common tilt is the wrong slope. |
+
+```
+root -l -b -q 'plot_projection_error.C()'     # all three
+root -l -b -q 'plot_projection_error.C(1)'    # just the geometry
+```
