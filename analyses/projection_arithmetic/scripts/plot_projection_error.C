@@ -196,12 +196,12 @@ void FigVsPt(const char* out) {
   fr->GetXaxis()->SetNoExponent();
 
   const int col[6] = {0, 0, kGreen + 2, kOrange + 7, kMagenta + 2, kRed + 1};
-  auto* leg = new TLegend(0.55, 0.60, 0.97, 0.90);
+  auto* leg = new TLegend(0.45, 0.655, 0.97, 0.90);
   leg->SetBorderSize(0);
   leg->SetFillStyle(0);
   leg->SetMargin(0.09);
-  leg->SetTextSize(0.031);
-  leg->SetHeader("L1L2 seed, 3rd order");
+  leg->SetTextSize(0.029);
+  leg->SetHeader("L1L2 seed, 3rd-order series   (#bullet : error = window)");
   for (int L = 2; L < 6; ++L) {
     auto* g = new TGraph();
     for (double pt = 0.35; pt <= 3.0; pt *= 1.01) {
@@ -212,18 +212,27 @@ void FigVsPt(const char* out) {
     g->SetLineColor(col[L]);
     g->SetLineWidth(3);
     g->Draw("L same");
-    leg->AddEntry(g, Form("L%d   window %.1f mm", L + 1, kWindow[L]), "l");
-    auto* w = new TLine(0.35, kWindow[L], 3.0, kWindow[L]);
-    w->SetLineColor(col[L]);
-    w->SetLineStyle(3);
-    w->Draw();
+
+    // where this curve meets its own window: below that pT the layer stops
+    // matching. One marker per layer is easier to read than four look-alike
+    // horizontal lines bunched between 1 and 5 mm.
+    double lo = 0.35, hi = 3.0;
+    for (int it = 0; it < 60; ++it) {
+      double mid = 0.5 * (lo + hi);
+      double e = ErrMM(kRmean[L], mid);
+      ((e < 0 || e > kWindow[L]) ? lo : hi) = mid;
+    }
+    auto* mk = new TGraph(1);
+    mk->SetPoint(0, hi, kWindow[L]);
+    mk->SetMarkerStyle(20);
+    mk->SetMarkerSize(1.7);
+    mk->SetMarkerColor(col[L]);
+    mk->Draw("P same");
+
+    leg->AddEntry(g, Form("L%d   window %.1f mm,  fails below %.2f GeV", L + 1, kWindow[L], hi), "l");
   }
   leg->Draw();
 
-  TLatex tx;
-  tx.SetNDC();
-  tx.SetTextSize(0.038);
-  tx.DrawLatex(0.13, 0.945, "Projection error against the match window");
   Save(c, out);
 }
 
@@ -286,8 +295,6 @@ void FigInLayer(const char* out, double pt = 0.7, int layer = 3) {
 
   TLatex tx;
   tx.SetNDC();
-  tx.SetTextSize(0.038);
-  tx.DrawLatex(0.13, 0.945, Form("Inside L%d, p_{T} = %.1f GeV", layer + 1, pt));
   tx.SetTextSize(0.029);
   tx.SetTextColor(kGray + 2);
   tx.DrawLatex(0.545, 0.715, "r_{mean}");
