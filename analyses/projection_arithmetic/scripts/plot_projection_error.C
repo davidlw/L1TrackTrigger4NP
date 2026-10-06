@@ -790,12 +790,13 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
       const double pt_ = phi0 - std::asin(xs) + rot;
       const double pp_ = phi0 - asin3(xmL) - (rs - kRmean[layer]) * 0.5 * rinv + rot;
       auto* gl = new TGraph();
-      for (double r = kRmean[layer] - 9.; r <= kRmean[layer] + 9.; r += 1.0) {
+      for (double r = kRmean[layer] - 9.; r <= kRmean[layer] + 9.; r += 3.0) {
         double ph = phi0 - asin3(xmL) - (r - kRmean[layer]) * 0.5 * rinv + rot;
         gl->SetPoint(gl->GetN(), r * std::cos(ph), r * std::sin(ph));
       }
       gl->SetLineColor(kViolet + 1);
       gl->SetLineWidth(3);
+      gl->SetLineStyle(11);
       gl->Draw("L same");
       auto* ms = new TMarker(rs * std::cos(pt_), rs * std::sin(pt_), 20);
       ms->SetMarkerSize(1.4);
@@ -832,12 +833,13 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
         // evaluated at the stub's radius. Drawn well past the +-3.75 cm it is
         // used over, so that it reads as the straight line it is.
         auto* gl = new TGraph();
-        for (double r = kRmean[L] - 9.; r <= kRmean[L] + 9.; r += 1.0) {
+        for (double r = kRmean[L] - 9.; r <= kRmean[L] + 9.; r += 3.0) {
           double ph = phi0 - asin3(xmL) - (r - kRmean[L]) * 0.5 * rinv + rot;
           gl->SetPoint(gl->GetN(), r * std::cos(ph), r * std::sin(ph));
         }
         gl->SetLineColor(kViolet + 1);
         gl->SetLineWidth(3);
+        gl->SetLineStyle(11);
         gl->Draw("L same");
         auto* ma = new TMarker(kRmean[L] * std::cos(phi0 - asin3(xmL) + rot),
                                kRmean[L] * std::sin(phi0 - asin3(xmL) + rot), 21);
@@ -910,7 +912,7 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
   ov.SetTextSize(0.036);
   ov.DrawLatex(2., 84., "#odot  the two seed stubs: they fix r_{inv} and #phi_{0}");
   ov.DrawLatex(2., 79., "#Box  the projection to each layer, taken at r_{mean}");
-  ov.DrawLatex(2., 74., "purple: its linear extension, slope #minusr_{inv}/2");
+  ov.DrawLatex(2., 74., "dashed: its linear extension, slope #minusr_{inv}/2");
   ov.DrawLatex(2., 69., "#Delta  where that lands at the stub's own radius");
 
   Save(c, out);
