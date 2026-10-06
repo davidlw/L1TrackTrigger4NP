@@ -216,6 +216,26 @@ root -l -b -q 'plot_projection_error.C()'     # all four
 root -l -b -q 'plot_projection_error.C(1)'    # just the geometry
 ```
 
+**The real geometry of a barrel layer**, measured from the stub and cluster
+positions in an EPOS pPb ntuple (Extended2026D110), not assumed:
+
+| layer | nominal `rmean` | ladder radii [cm] | full spread [cm] |
+|---|---|---|---|
+| L1 (PS) | 24.9 | 21.89, 24.27 | 21.24 - 29.01 |
+| L2 (PS) | 37.2 | 34.76, 37.13 | 34.20 - 40.88 |
+| L3 (PS) | 52.3 | 49.93, 52.31 | 49.40 - 55.88 |
+| L4 (2S) | 68.7 | 66.99, 70.15 | 66.63 - 70.92 |
+| L5 (2S) | 86.0 | 84.29, 87.45 | 83.94 - 88.19 |
+| L6 (2S) | 108.3 | 106.58, 109.74 | 106.23 - 110.46 |
+
+Resolving the clusters rather than the stubs shows the two-sensor structure of
+each module: in L4 the sensor planes sit at 66.80, 67.25, 69.97 and 70.41 cm,
+i.e. modules of two sensors about 4.5 mm apart on ladders about 3 cm apart.
+
+**Note that `rmean` falls in the gap between the two ladders**, so no stub is
+ever at the radius where the projection is evaluated; every stub needs the
+linear step, by roughly +-1.7 cm.
+
 **What "stub radius" means.** A barrel layer is not a mathematical cylinder.
 Its modules sit on ladders staggered between two radii so they overlap in phi
 without gaps, and toward the ends of the barrel they are tilted to point at the

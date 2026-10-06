@@ -237,46 +237,60 @@ void FigVsPt(const char* out) {
 }
 
 // ---------------------------------------------------------------------------
-// Figure 3 -- one layer, drawn in the frame of the true track.
+// Figure 3 -- one layer, with its real geometry, in the frame of the true track.
 //
-// The track's azimuth sweeps about 40 mm across a layer, far more than the
-// 1.9 mm match window, so absolute position shows nothing. Measuring from the
-// true track instead puts the track on y = 0, with its stubs on it, and the
-// question becomes whether the window around the PREDICTED position still
-// contains them.
+// L4 is built from 2S modules on ladders staggered between two radii so that
+// they overlap in phi without gaps, and each module is a pair of sensors a few
+// millimetres apart. The radii below are measured from the stub and cluster
+// positions in an EPOS pPb ntuple (Extended2026D110):
 //
-// The prediction is wrong in two ways: by the series truncation, the same at
-// every radius, and by the slope, which grows with dr. At 0.85 GeV the first
-// is 1.4 mm against a 1.9 mm window -- survivable alone -- and the second
-// carries the outer stubs out of the window entirely.
+//     inner ladder   sensors at 66.80 and 67.25 cm
+//     outer ladder   sensors at 69.97 and 70.41 cm
+//     rmean = 68.7 cm lies in the gap BETWEEN them
+//
+// so no stub is ever at rmean, and every stub needs the linear step -- by
+// about +-1.7 cm. The track's azimuth sweeps tens of millimetres across that,
+// far more than the 1.9 mm window, so the plot is drawn relative to the true
+// track: the track is the line y = 0 with its stubs on it, and the question is
+// whether the window around the PREDICTED position still contains them.
 // ---------------------------------------------------------------------------
-void FigInLayer(const char* out, double pt = 0.85, int layer = 3) {
-  auto* c = new TCanvas("clay", "", 760, 650);
-  c->SetLeftMargin(0.13);
-  c->SetRightMargin(0.04);
+void FigInLayer(const char* out, double pt = 0.80, int layer = 3) {
+  auto* c = new TCanvas("clay", "", 820, 650);
+  c->SetLeftMargin(0.125);
+  c->SetRightMargin(0.035);
   c->SetBottomMargin(0.12);
   c->SetTopMargin(0.06);
 
+  // measured sensor radii of L4; stubs sit at the inner sensor of each module
+  const double kSensor[4] = {66.80, 67.25, 69.97, 70.41};
+  const double kStub[2] = {66.80, 69.97};
+
   const double rm = kRmean[layer], rinv = kCurv / pt, x0 = 0.5 * rm * rinv;
-  const double win = kWindow[layer], lo = rm - kDrMax - 0.9, hi = rm + kDrMax + 0.9;
-  const double derApprox = -0.5 * rinv;  // what the code uses for dphi/dr
+  const double win = kWindow[layer], lo = 65.9, hi = 71.7;
+  const double derApprox = -0.5 * rinv;  // the small-angle slope the code uses
 
-  auto* fr = gPad->DrawFrame(lo, -5.5, hi, 7.5);
-  fr->GetXaxis()->SetTitle("stub radius r_{stub} [cm]");
+  auto* fr = gPad->DrawFrame(lo, -4.3, hi, 5.3);
+  fr->GetXaxis()->SetTitle("r  [cm]   (radially outward #rightarrow)");
   fr->GetYaxis()->SetTitle("azimuthal position, relative to the true track [mm]");
-  fr->GetYaxis()->SetTitleOffset(1.30);
+  fr->GetYaxis()->SetTitleOffset(1.25);
 
-  // predicted position, measured from the true track: series offset + slope*dr
+  // predicted position measured from the true track: series offset + slope*dr
   auto Pred = [&](double r) {
     return (-asin3(x0) + (r - rm) * derApprox + std::asin(0.5 * r * rinv)) * rm * 10.;
   };
 
-  auto* band = new TBox(rm - kDrMax, -5.5, rm + kDrMax, 7.5);  // the layer
-  band->SetFillColorAlpha(kAzure + 1, 0.05);
-  band->Draw();
+  for (int i = 0; i < 4; ++i) {  // the four sensor planes
+    auto* sb = new TBox(kSensor[i] - 0.035, -2.45, kSensor[i] + 0.035, 5.3);
+    sb->SetFillColorAlpha(kGray + 1, 0.55);
+    sb->Draw();
+  }
+  for (int m = 0; m < 2; ++m) {  // bracket each two-sensor module
+    auto* mb = new TBox(kSensor[2 * m] - 0.10, -2.75, kSensor[2 * m + 1] + 0.10, -2.55);
+    mb->SetFillColorAlpha(kGray + 2, 0.55);
+    mb->Draw();
+  }
 
-  // the match window, drawn around where the algorithm actually looks
-  auto* gWin = new TGraph();
+  auto* gWin = new TGraph();  // the match window, around where the code looks
   for (double r = lo; r <= hi; r += 0.25)
     gWin->SetPoint(gWin->GetN(), r, Pred(r) + win);
   for (double r = hi; r >= lo; r -= 0.25)
@@ -284,8 +298,8 @@ void FigInLayer(const char* out, double pt = 0.85, int layer = 3) {
   gWin->SetFillColorAlpha(kOrange + 7, 0.25);
   gWin->Draw("F same");
 
-  auto* gP = new TGraph();  // where the algorithm looks
-  for (double r = lo; r <= hi; r += 0.75)
+  auto* gP = new TGraph();
+  for (double r = lo; r <= hi; r += 0.58)
     gP->SetPoint(gP->GetN(), r, Pred(r));
   gP->SetLineColor(kOrange + 8);
   gP->SetLineWidth(3);
@@ -297,78 +311,57 @@ void FigInLayer(const char* out, double pt = 0.85, int layer = 3) {
   trk->SetLineWidth(4);
   trk->Draw();
 
-  // a handful of stubs, at radii spread across the layer
-  auto *gOk = new TGraph(), *gBad = new TGraph();
-  const double drs[5] = {-3.2, -1.6, 0.0, 1.6, 3.2};
-  for (double dr : drs) {
-    double r = rm + dr;
-    ((std::abs(Pred(r)) < win) ? gOk : gBad)->SetPoint(((std::abs(Pred(r)) < win) ? gOk : gBad)->GetN(), r, 0.);
-  }
-  gOk->SetMarkerStyle(20);
-  gOk->SetMarkerSize(2.0);
-  gOk->SetMarkerColor(kGreen + 3);
-  gBad->SetMarkerStyle(20);
-  gBad->SetMarkerSize(2.0);
-  gBad->SetMarkerColor(kGray + 2);
-  gOk->Draw("P same");
-  gBad->Draw("P same");
-  for (double dr : drs) {  // cross out the ones that are lost
-    double r = rm + dr;
-    if (std::abs(Pred(r)) < win)
-      continue;
-    auto* xx = new TMarker(r, 0, 5);
-    xx->SetMarkerColor(kRed + 2);
-    xx->SetMarkerSize(2.4);
-    xx->Draw();
-  }
-
-  auto* vm = new TLine(rm, -5.5, rm, 7.5);
+  auto* vm = new TLine(rm, -3.5, rm, 5.3);
   vm->SetLineStyle(3);
   vm->SetLineColor(kGray + 2);
   vm->Draw();
 
-  // the two errors, where each is defined
-  const double offMM = Pred(rm);
-  auto* aoff = new TArrow(rm + 0.12, 0, rm + 0.12, offMM, 0.012, "<|>");
-  aoff->SetLineColor(kRed + 2);
-  aoff->SetFillColor(kRed + 2);
-  aoff->SetLineWidth(2);
-  aoff->Draw();
-  const double rS = rm + 3.2;
-  auto* aslp = new TArrow(rS, offMM, rS, Pred(rS), 0.012, "<|>");
-  aslp->SetLineColor(kAzure + 3);
-  aslp->SetFillColor(kAzure + 3);
-  aslp->SetLineWidth(2);
-  aslp->Draw();
-  auto* href = new TLine(rm, offMM, rS, offMM);
-  href->SetLineColor(kAzure + 3);
-  href->SetLineStyle(3);
-  href->Draw();
+  auto *gOk = new TGraph(), *gBad = new TGraph();
+  for (double r : kStub)
+    ((std::abs(Pred(r)) < win) ? gOk : gBad)->SetPoint(((std::abs(Pred(r)) < win) ? gOk : gBad)->GetN(), r, 0.);
+  gOk->SetMarkerStyle(20);
+  gOk->SetMarkerSize(2.2);
+  gOk->SetMarkerColor(kGreen + 3);
+  gBad->SetMarkerStyle(20);
+  gBad->SetMarkerSize(2.2);
+  gBad->SetMarkerColor(kGray + 3);
+  gOk->Draw("P same");
+  gBad->Draw("P same");
+  for (double r : kStub) {
+    if (std::abs(Pred(r)) < win)
+      continue;
+    auto* xx = new TMarker(r, 0, 5);
+    xx->SetMarkerColor(kRed + 2);
+    xx->SetMarkerSize(2.6);
+    xx->Draw();
+  }
 
   TLatex an;
-  an.SetTextSize(0.027);
-  an.SetTextAlign(12);
-  an.SetTextColor(kRed + 2);
-  an.DrawLatex(rm + 0.4, 0.5 * offMM, "series");
-  an.SetTextColor(kAzure + 3);
-  an.SetTextAlign(32);
-  an.DrawLatex(rS - 0.25, 0.5 * (offMM + Pred(rS)), "slope #times dr");
+  an.SetTextSize(0.026);
   an.SetTextAlign(22);
   an.SetTextColor(kGray + 3);
-  an.DrawLatex(rm, -4.6, Form("one layer:  |dr| #leq %.2f cm", kDrMax));
+  for (int m = 0; m < 2; ++m)
+    an.DrawLatex(0.5 * (kSensor[2 * m] + kSensor[2 * m + 1]), -3.25,
+                 m == 0 ? "module = 2 sensors" : "module, outer ladder");
   an.SetTextColor(kGray + 2);
-  an.DrawLatex(rm - 1.5, -3.3, "r_{mean}");
+  an.DrawLatex(rm, -3.95, "r_{mean}  (no stub is here)");
+  an.SetTextSize(0.0245);
+  an.SetTextColor(kGreen + 3);
+  an.SetTextAlign(12);
+  an.DrawLatex(kStub[0] + 0.12, -0.75, "inside the window");
+  an.SetTextColor(kRed + 2);
+  an.SetTextAlign(32);
+  an.DrawLatex(kStub[1] - 0.12, -0.75, "outside: lost");
 
-  auto* leg = new TLegend(0.145, 0.735, 0.97, 0.935);
+  auto* leg = new TLegend(0.135, 0.745, 0.88, 0.935);
   leg->SetBorderSize(0);
   leg->SetFillStyle(0);
-  leg->SetMargin(0.07);
-  leg->SetTextSize(0.0275);
-  leg->SetHeader(Form("L%d, p_{T} = %.2f GeV,  match window %.1f mm", layer + 1, pt, win));
+  leg->SetMargin(0.06);
+  leg->SetTextSize(0.0255);
+  leg->SetHeader(Form("L%d, p_{T} = %.2f GeV,  window %.1f mm,  geometry from the ntuple", layer + 1, pt, win));
   leg->AddEntry(trk, "true track, with its stubs", "l");
   leg->AddEntry(gP, "where the algorithm looks", "l");
   leg->AddEntry(gWin, "match window around it", "f");
-  leg->AddEntry(gBad, "stub outside the window: lost", "p");
   leg->Draw();
 
   Save(c, out);
