@@ -248,8 +248,8 @@ void FigInLayer(const char* out, double pt = 0.7, int layer = 3) {
   c->SetTopMargin(0.08);
 
   const double rm = kRmean[layer], rinv = kCurv / pt, x0 = 0.5 * rm * rinv;
-  auto* fr = gPad->DrawFrame(rm - kDrMax - 0.4, -7, rm + kDrMax + 0.4, 11);
-  fr->GetXaxis()->SetTitle("stub radius [cm]");
+  auto* fr = gPad->DrawFrame(rm - kDrMax - 0.9, -9, rm + kDrMax + 0.9, 11);
+  fr->GetXaxis()->SetTitle("stub radius r_{stub} [cm]");
   fr->GetYaxis()->SetTitle("predicted #minus true position [mm]");
   fr->GetYaxis()->SetTitleOffset(1.30);
 
@@ -262,19 +262,42 @@ void FigInLayer(const char* out, double pt = 0.7, int layer = 3) {
     gSlope->SetPoint(gSlope->GetN(), r, (-std::asin(x0) + dr * derApprox - truePhi) * rm * 10.);
   }
 
-  auto* zero = new TLine(rm - kDrMax - 0.4, 0, rm + kDrMax + 0.4, 0);
+  const double lo = rm - kDrMax - 0.9, hi = rm + kDrMax + 0.9;
+
+  // the band of radii a stub can have in this layer. The projection is
+  // evaluated once, at rmean; MatchProcessor then steps to the stub's own
+  // radius, and the stub word stores that offset as a 7-bit signed number
+  // over +-drmax.
+  auto* band = new TBox(rm - kDrMax, -9, rm + kDrMax, 11);
+  band->SetFillColorAlpha(kAzure + 1, 0.05);
+  band->Draw();
+
+  auto* zero = new TLine(lo, 0, hi, 0);
   zero->SetLineColor(kGray + 2);
   zero->Draw();
   for (int s : {-1, 1}) {
-    auto* w = new TLine(rm - kDrMax - 0.4, s * kWindow[layer], rm + kDrMax + 0.4, s * kWindow[layer]);
+    auto* w = new TLine(lo, s * kWindow[layer], hi, s * kWindow[layer]);
     w->SetLineStyle(2);
     w->SetLineColor(kGray + 3);
     w->Draw();
   }
-  auto* vm = new TLine(rm, -7, rm, 11);
+  auto* vm = new TLine(rm, -9, rm, 11);
   vm->SetLineStyle(3);
   vm->SetLineColor(kGray + 2);
   vm->Draw();
+
+  // where the projection is actually evaluated
+  auto* amean = new TArrow(rm, -7.4, rm, -5.6, 0.015, "|>");
+  amean->SetLineColor(kGray + 3);
+  amean->SetFillColor(kGray + 3);
+  amean->SetLineWidth(2);
+  amean->Draw();
+
+  // the extent of the band
+  auto* aspan = new TArrow(rm - kDrMax, -8.3, rm + kDrMax, -8.3, 0.012, "<|>");
+  aspan->SetLineColor(kAzure + 2);
+  aspan->SetFillColor(kAzure + 2);
+  aspan->Draw();
 
   gSlope->SetLineColor(kAzure + 2);
   gSlope->SetLineWidth(3);
@@ -284,7 +307,7 @@ void FigInLayer(const char* out, double pt = 0.7, int layer = 3) {
   gBoth->SetLineWidth(4);
   gBoth->Draw("L same");
 
-  auto* leg = new TLegend(0.165, 0.775, 0.97, 0.895);
+  auto* leg = new TLegend(0.145, 0.805, 0.97, 0.915);
   leg->SetBorderSize(0);
   leg->SetFillStyle(0);
   leg->SetMargin(0.09);
@@ -293,11 +316,41 @@ void FigInLayer(const char* out, double pt = 0.7, int layer = 3) {
   leg->AddEntry(gSlope, "small-angle slope only  (series made exact)", "l");
   leg->Draw();
 
+  // Two arrows, two errors. At rmean the blue curve is zero by construction,
+  // so the gap to the red curve there is exactly the series truncation. Away
+  // from rmean both curves rise together: that common tilt is the slope error.
+  const double offMM = (-asin3(x0) + std::asin(x0)) * rm * 10.;
+  auto* aoff = new TArrow(rm + 0.12, 0, rm + 0.12, offMM, 0.012, "<|>");
+  aoff->SetLineColor(kRed + 2);
+  aoff->SetFillColor(kRed + 2);
+  aoff->SetLineWidth(2);
+  aoff->Draw();
+
+  const double rSlope = rm + 2.8;
+  const double slopeMM = (-std::asin(x0) + (rSlope - rm) * derApprox + std::asin(0.5 * rSlope * rinv)) * rm * 10.;
+  auto* aslp = new TArrow(rSlope, 0, rSlope, slopeMM, 0.012, "<|>");
+  aslp->SetLineColor(kAzure + 3);
+  aslp->SetFillColor(kAzure + 3);
+  aslp->SetLineWidth(2);
+  aslp->Draw();
+
+  TLatex an;
+  an.SetTextSize(0.027);
+  an.SetTextColor(kGray + 3);
+  an.SetTextAlign(22);
+  an.DrawLatex(rm, -4.8, "projection evaluated here, r_{mean}");
+  an.SetTextColor(kAzure + 2);
+  an.DrawLatex(rm, -7.6, Form("stub radii in this layer: |dr| #leq %.2f cm", kDrMax));
+  an.SetTextAlign(12);
+  an.SetTextColor(kRed + 2);
+  an.DrawLatex(rm + 0.45, 0.55 * offMM, "series");
+  an.SetTextColor(kAzure + 3);
+  an.DrawLatex(rSlope + 0.25, 0.55 * slopeMM, "slope #times dr");
+
   TLatex tx;
   tx.SetNDC();
   tx.SetTextSize(0.029);
   tx.SetTextColor(kGray + 2);
-  tx.DrawLatex(0.545, 0.715, "r_{mean}");
   Save(c, out);
 }
 
