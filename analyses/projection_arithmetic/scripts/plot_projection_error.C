@@ -746,12 +746,28 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
   fo->GetYaxis()->SetLabelSize(0.040);
   fo->GetYaxis()->SetTitleOffset(1.30);
 
-  for (int i = 0; i < 6; ++i) {  // the barrel layers
+  for (int i = 0; i < 6; ++i) {  // the other barrel layers, for context
+    if (i == layer)
+      continue;
     auto* arc = new TArc(0, 0, kRmean[i], -4, 92);
     arc->SetFillStyle(0);
     arc->SetLineColor(kGray + 1);
     arc->SetLineStyle(3);
     arc->Draw("only");
+  }
+
+  // L4 as what it really is: flat modules alternating between two radii all the
+  // way round in phi. A module is 4.5 mm thick, well under a pixel here, so
+  // each is drawn as a segment along its own plane.
+  for (int m = -10; m <= 10; ++m) {
+    const double rr = (m % 2 == 0) ? 0.5 * (kSensor[0] + kSensor[1]) : 0.5 * (kSensor[2] + kSensor[3]);
+    const double half = 4.9;
+    const double phiM = rot - 0.018 + m * (2 * half * 0.97) / rm;
+    auto* ln = new TLine(rr * std::cos(phiM) + half * std::sin(phiM), rr * std::sin(phiM) - half * std::cos(phiM),
+                         rr * std::cos(phiM) - half * std::sin(phiM), rr * std::sin(phiM) + half * std::cos(phiM));
+    ln->SetLineColor(kGray + 1);
+    ln->SetLineWidth(4);
+    ln->Draw();
   }
   for (int k = 0; k < 2; ++k) {
     const double phi0 = (k == 0) ? phi0A : phi0B;
@@ -777,6 +793,32 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
     gp->SetLineStyle(11);
     gp->Draw("L same");
   }
+  {  // theta: the angle between the track and the radial direction where it
+    // crosses. 1/sqrt(1-x^2) = sec(theta), and the code uses sec(theta) = 1.
+    const double phC = phi0A - std::asin(x0) + rot;
+    const double px = rm * std::cos(phC), py = rm * std::sin(phC);
+    auto* ray = new TLine(0, 0, 84. * std::cos(phC), 84. * std::sin(phC));
+    ray->SetLineColor(kGray + 2);
+    ray->SetLineWidth(2);
+    ray->SetLineStyle(3);
+    ray->Draw();
+    const double dpsi = -(0.5 * rinv) / std::sqrt(1 - x0 * x0);
+    const double aTrk =
+        std::atan2(std::sin(phC) + rm * std::cos(phC) * dpsi, std::cos(phC) - rm * std::sin(phC) * dpsi);
+    auto* arcT = new TArc(px, py, 12., aTrk * TMath::RadToDeg(), phC * TMath::RadToDeg());
+    arcT->SetFillStyle(0);
+    arcT->SetLineColor(kGray + 3);
+    arcT->SetLineWidth(2);
+    arcT->Draw("only");
+    TLatex ta;
+    ta.SetTextSize(0.038);
+    ta.SetTextColor(kGray + 3);
+    ta.SetTextAlign(22);
+    const double am = 0.5 * (aTrk + phC);
+    ta.DrawLatex(px + 16.5 * std::cos(am), py + 16.5 * std::sin(am),
+                 Form("#theta = %.0f#circ", std::asin(x0) * TMath::RadToDeg()));
+  }
+
   auto* ip = new TMarker(0, 0, 20);
   ip->SetMarkerSize(1.5);
   ip->SetMarkerColor(kBlack);
@@ -806,9 +848,9 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
   ov.DrawLatex(40., 65., "shown at right");
   ov.SetTextColor(kOrange + 9);
   ov.SetTextAlign(12);
-  ov.DrawLatex(2., 81., "dashed: the straight line the algorithm");
-  ov.DrawLatex(2., 76., "uses, anchored at r_{mean} with slope #minusr_{inv}/2");
-  ov.DrawLatex(2., 71., "(only #pm3.75 cm of it is actually used)");
+  ov.DrawLatex(2., 82., "dashed orange: the line the algorithm uses,");
+  ov.DrawLatex(2., 77., "slope #minusr_{inv}/2, which is the slope of a track");
+  ov.DrawLatex(2., 72., "crossing radially. The real track is at #theta.");
 
   Save(c, out);
 }
