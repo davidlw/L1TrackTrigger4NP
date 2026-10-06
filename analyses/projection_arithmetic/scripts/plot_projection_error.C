@@ -722,7 +722,7 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
   lw->SetLineColor(kOrange + 7);
   lw->SetLineWidth(9);
   leg->AddEntry(lt, "true helix, and its stub", "l");
-  leg->AddEntry(lp, "the line the algorithm predicts", "l");
+  leg->AddEntry(lp, "the trajectory the algorithm assumes", "l");
   leg->AddEntry(lw, Form("#pm%.1f mm match window", kWindow[layer]), "l");
   leg->AddEntry((TObject*)nullptr, Form("L%d,  p_{T} = %.2f GeV", layer + 1, pt), "");
   leg->Draw();
@@ -848,9 +848,9 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
   ov.DrawLatex(40., 65., "shown at right");
   ov.SetTextColor(kOrange + 9);
   ov.SetTextAlign(12);
-  ov.DrawLatex(2., 82., "dashed orange: the line the algorithm uses,");
-  ov.DrawLatex(2., 77., "slope #minusr_{inv}/2, which is the slope of a track");
-  ov.DrawLatex(2., 72., "crossing radially. The real track is at #theta.");
+  ov.DrawLatex(2., 82., "dashed orange: d#phi/dr held at #minusr_{inv}/2, the value");
+  ov.DrawLatex(2., 77., "for a track crossing radially. The real track is at");
+  ov.DrawLatex(2., 72., "#theta, so it curves more sharply than the assumption.");
 
   Save(c, out);
 }

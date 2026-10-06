@@ -118,6 +118,27 @@ A stub matches if `|dphi| * rmean < rphimatchcut_` and `|dz| < zmatchcut_`.
 
 ---
 
+### What the predicted trajectory actually is
+
+The emulation does not fit a curve to the layer. It holds one number constant:
+
+```
+dphi/dr = -rinv/2                  ->   phi(r) = phi_anchor - (rinv/2)*(r - rmean)
+```
+
+with `rinv` taken from the two seed stubs. `phi` linear in `r` is a straight
+line in the coordinates the algorithm works in, but in the transverse plane it
+traces a spiral, and it is less curved than the track:
+
+| pT | true helix radius | radius of the assumed trajectory | ratio |
+|---|---|---|---|
+| 2.0 GeV | 175.5 cm | 182.2 cm | 1.04 |
+| 0.6 GeV | 52.7 cm | **73.9 cm** | **1.40** |
+
+The ratio is `sec(theta)` to first order -- the same factor as in A2 below. So
+the assumption is not "the track is straight", it is "the track curves at the
+rate it would if it were still travelling radially".
+
 ## 3. The three approximations, and their errors
 
 Write the position error on the layer as the angular error times the radius.
