@@ -89,7 +89,7 @@ void FigGeometry(const char* out) {
   circ->Draw("only");
 
   auto *gT = new TGraph(), *gA = new TGraph();
-  for (double r = 0; r <= reach; r += 0.2) {
+  for (double r = 0; r <= reach; r += 2.0) {
     double x = 0.5 * r * rinvA;
     if (x > 1.)
       break;
@@ -101,7 +101,7 @@ void FigGeometry(const char* out) {
   gT->Draw("L same");
   gA->SetLineColor(kRed + 1);
   gA->SetLineWidth(2);
-  gA->SetLineStyle(2);
+  gA->SetLineStyle(11);
   gA->Draw("L same");
 
   auto* mx = new TMarker(0, reach, 29);  // the turning point, x = 1
@@ -111,7 +111,7 @@ void FigGeometry(const char* out) {
 
   const double rinvB = kCurv / 2.0;  // 2 GeV, for contrast
   auto *gT2 = new TGraph(), *gA2 = new TGraph();
-  for (double r = 0; r <= 118; r += 0.5) {
+  for (double r = 0; r <= 118; r += 3.0) {
     double x = 0.5 * r * rinvB;
     gT2->SetPoint(gT2->GetN(), r * std::cos(std::asin(x)), r * std::sin(std::asin(x)));
     gA2->SetPoint(gA2->GetN(), r * std::cos(asin3(x)), r * std::sin(asin3(x)));
@@ -121,7 +121,7 @@ void FigGeometry(const char* out) {
   gT2->Draw("L same");
   gA2->SetLineColor(kAzure + 2);
   gA2->SetLineWidth(2);
-  gA2->SetLineStyle(2);
+  gA2->SetLineStyle(11);
   gA2->Draw("L same");
 
   auto *mT = new TGraph(), *mA = new TGraph();  // the layer crossings
@@ -232,7 +232,7 @@ void FigInLayer(const char* out, double pt = 0.7, int layer = 3) {
   const double derApprox = -0.5 * rinv;  // what the code uses
 
   auto *gBoth = new TGraph(), *gSlope = new TGraph();
-  for (double r = rm - kDrMax; r <= rm + kDrMax; r += 0.05) {
+  for (double r = rm - kDrMax; r <= rm + kDrMax; r += 0.75) {
     double truePhi = -std::asin(0.5 * r * rinv), dr = r - rm;
     gBoth->SetPoint(gBoth->GetN(), r, (-asin3(x0) + dr * derApprox - truePhi) * rm * 10.);
     gSlope->SetPoint(gSlope->GetN(), r, (-std::asin(x0) + dr * derApprox - truePhi) * rm * 10.);
@@ -254,7 +254,7 @@ void FigInLayer(const char* out, double pt = 0.7, int layer = 3) {
 
   gSlope->SetLineColor(kAzure + 2);
   gSlope->SetLineWidth(3);
-  gSlope->SetLineStyle(2);
+  gSlope->SetLineStyle(11);
   gSlope->Draw("L same");
   gBoth->SetLineColor(kRed + 1);
   gBoth->SetLineWidth(4);
@@ -283,6 +283,8 @@ void FigInLayer(const char* out, double pt = 0.7, int layer = 3) {
 void plot_projection_error(int which = 0) {
   gROOT->SetBatch(true);
   gStyle->SetOptStat(0);
+  // ROOT's built-in dashed styles are too fine to read at these line widths
+  gStyle->SetLineStyleString(11, "70 34");
   if (which == 0 || which == 1)
     FigGeometry("../figures/projection_geometry");
   if (which == 0 || which == 2)
