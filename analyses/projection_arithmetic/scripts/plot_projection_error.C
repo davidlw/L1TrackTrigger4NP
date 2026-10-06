@@ -647,9 +647,30 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
     an.SetTextAlign(23);
     an.DrawLatex(0.5 * (Vtrue(rHit) + shift + vP), rHit - 0.42,
                  Form("%.1f mm %s", miss * 10., miss < win ? "- matched" : "- lost"));
+    // the line is anchored at rmean -- a radius with no module on it -- and is
+    // already displaced there by the series truncation; from that point it is
+    // extended with the small-angle slope.
+    auto* anch = new TMarker(Vpred(rm) + shift, rm, 21);
+    anch->SetMarkerColor(kOrange + 8);
+    anch->SetMarkerSize(1.6);
+    anch->Draw();
+    if (k == 0) {
+      auto* aser = new TArrow(Vtrue(rm) + shift, rm, Vpred(rm) + shift, rm, 0.011, "<|>");
+      aser->SetLineColor(kOrange + 9);
+      aser->SetFillColor(kOrange + 9);
+      aser->SetLineWidth(2);
+      aser->Draw();
+      an.SetTextColor(kOrange + 9);
+      an.SetTextAlign(23);
+      an.DrawLatex(0.5 * (Vtrue(rm) + Vpred(rm)) + shift, rm - 0.18,
+                   Form("series error, %.1f mm", (Vpred(rm) - Vtrue(rm)) * 10.));
+      an.SetTextAlign(12);
+      an.DrawLatex(Vpred(rm) + shift + 0.22, rm + 0.42, "line starts here, at r_{mean}");
+    }
+
     an.SetTextColor(kRed + 1);
-    an.SetTextAlign(k == 0 ? 32 : 12);
-    an.DrawLatex(shift + (k == 0 ? -0.25 : 0.25), rm + 0.28, k == 0 ? "track A" : "track B");
+    an.SetTextAlign(k == 0 ? 32 : 32);
+    an.DrawLatex(Vtrue(rLo + 0.25) + shift - 0.22, rLo + 0.30, k == 0 ? "track A" : "track B");
   }
 
   an.SetTextColor(kGray + 3);
