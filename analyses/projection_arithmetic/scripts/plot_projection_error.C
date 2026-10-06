@@ -648,7 +648,7 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
     auto* gP = new TGraph();
     for (double r = rLo - 0.5; r <= rHi + 0.5; r += 0.55)
       gP->SetPoint(gP->GetN(), Y(r, PhiP(r)), X(r, PhiP(r)));
-    gP->SetLineColor(kOrange + 8);
+    gP->SetLineColor(kViolet + 1);
     gP->SetLineWidth(3);
     gP->SetLineStyle(11);
     gP->Draw("L same");
@@ -685,7 +685,7 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
 
     // the anchor: the one radius at which the projection is evaluated
     auto* anch = new TMarker(Y(rm, PhiP(rm)), X(rm, PhiP(rm)), 21);
-    anch->SetMarkerColor(kOrange + 8);
+    anch->SetMarkerColor(kViolet + 1);
     anch->SetMarkerSize(1.6);
     anch->Draw();
 
@@ -720,7 +720,7 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
   lt->SetLineColor(kRed + 1);
   lt->SetLineWidth(4);
   auto* lp = new TLine();
-  lp->SetLineColor(kOrange + 8);
+  lp->SetLineColor(kViolet + 1);
   lp->SetLineWidth(3);
   lp->SetLineStyle(11);
   auto* lw = new TLine();
@@ -794,7 +794,7 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
         double ph = phi0 - asin3(xmL) - (r - kRmean[layer]) * 0.5 * rinv + rot;
         gl->SetPoint(gl->GetN(), r * std::cos(ph), r * std::sin(ph));
       }
-      gl->SetLineColor(kOrange + 8);
+      gl->SetLineColor(kViolet + 1);
       gl->SetLineWidth(3);
       gl->Draw("L same");
       auto* ms = new TMarker(rs * std::cos(pt_), rs * std::sin(pt_), 20);
@@ -803,7 +803,7 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
       ms->Draw();
       auto* mp = new TMarker(rs * std::cos(pp_), rs * std::sin(pp_), 22);
       mp->SetMarkerSize(1.7);
-      mp->SetMarkerColor(kOrange + 8);
+      mp->SetMarkerColor(kViolet + 1);
       mp->Draw();
     }
 
@@ -836,18 +836,18 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
           double ph = phi0 - asin3(xmL) - (r - kRmean[L]) * 0.5 * rinv + rot;
           gl->SetPoint(gl->GetN(), r * std::cos(ph), r * std::sin(ph));
         }
-        gl->SetLineColor(kOrange + 8);
+        gl->SetLineColor(kViolet + 1);
         gl->SetLineWidth(3);
         gl->Draw("L same");
         auto* ma = new TMarker(kRmean[L] * std::cos(phi0 - asin3(xmL) + rot),
                                kRmean[L] * std::sin(phi0 - asin3(xmL) + rot), 21);
         ma->SetMarkerSize(1.1);
-        ma->SetMarkerColor(kOrange + 8);
+        ma->SetMarkerColor(kViolet + 1);
         ma->Draw();
 
         auto* mp = new TMarker(rs * std::cos(pp_), rs * std::sin(pp_), 22);
         mp->SetMarkerSize(1.7);
-        mp->SetMarkerColor(kOrange + 8);
+        mp->SetMarkerColor(kViolet + 1);
         mp->Draw();
       }
     }
@@ -905,12 +905,12 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
   ov.SetTextColor(kAzure + 2);
   ov.SetTextAlign(32);
   ov.DrawLatex(40., 65., "shown at right");
-  ov.SetTextColor(kOrange + 9);
+  ov.SetTextColor(kViolet + 2);
   ov.SetTextAlign(12);
   ov.SetTextSize(0.036);
   ov.DrawLatex(2., 84., "#odot  the two seed stubs: they fix r_{inv} and #phi_{0}");
   ov.DrawLatex(2., 79., "#Box  the projection to each layer, taken at r_{mean}");
-  ov.DrawLatex(2., 74., "orange: its linear extension, slope #minusr_{inv}/2");
+  ov.DrawLatex(2., 74., "purple: its linear extension, slope #minusr_{inv}/2");
   ov.DrawLatex(2., 69., "#Delta  where that lands at the stub's own radius");
 
   Save(c, out);
