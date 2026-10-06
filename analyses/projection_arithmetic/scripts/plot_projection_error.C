@@ -679,8 +679,9 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
     ar->SetLineWidth(2);
     ar->Draw();
     an.SetTextColor(std::abs(miss) < win ? kGreen + 3 : kRed + 2);
-    an.SetTextAlign(32);
-    an.DrawLatex(Y(rHit, PhiT(rHit)) - 0.30, X(rHit, PhiT(rHit)),
+    an.SetTextAlign(k == 0 ? 32 : 12);
+    an.DrawLatex(Y(rHit, (k == 0) ? PhiT(rHit) : PhiP(rHit)) + (k == 0 ? -0.35 : 0.35),
+                 X(rHit, PhiT(rHit)) - 0.55,
                  Form("%.1f mm %s", std::abs(miss) * 10., std::abs(miss) < win ? "- matched" : "- lost"));
 
     // the anchor: the one radius at which the projection is evaluated
@@ -695,11 +696,11 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
   an.SetTextColor(kGray + 3);
   an.SetTextAlign(12);
   an.SetTextAlign(12);
-  an.DrawLatex(vLo + 0.5, rm + 0.22, "r_{mean}");
+  an.DrawLatex(vLo + 0.45, rm - 0.30, "r_{mean}");
   an.SetTextAlign(12);
-  an.DrawLatex(vLo + 0.5, 0.5 * (kSensor[0] + kSensor[1]) + 1.10, "inner ladder");
+  an.DrawLatex(vLo + 0.45, 0.5 * (kSensor[0] + kSensor[1]) - 0.55, "inner ladder");
   an.SetTextAlign(32);
-  an.DrawLatex(vHi - 0.4, 0.5 * (kSensor[2] + kSensor[3]) + 0.80, "outer ladder");
+  an.DrawLatex(vHi - 0.35, 0.5 * (kSensor[2] + kSensor[3]) + 0.75, "outer ladder");
 
   auto* leg = new TLegend(0.085, 0.925, 0.74, 0.985);
   leg->SetBorderSize(0);
