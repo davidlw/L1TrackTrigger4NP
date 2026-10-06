@@ -201,7 +201,7 @@ void FigVsPt(const char* out) {
   leg->SetFillStyle(0);
   leg->SetMargin(0.09);
   leg->SetTextSize(0.029);
-  leg->SetHeader("L1L2 seed, 3rd-order series   (#bullet : error = window)");
+  leg->SetHeader("3rd-order asin(x) truncation, L1L2 seed");
   for (int L = 2; L < 6; ++L) {
     auto* g = new TGraph();
     for (double pt = 0.35; pt <= 3.0; pt *= 1.01) {
