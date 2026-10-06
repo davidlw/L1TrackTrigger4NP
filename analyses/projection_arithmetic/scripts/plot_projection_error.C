@@ -279,14 +279,20 @@ void FigInLayer(const char* out, double pt = 0.80, int layer = 3) {
     return (-asin3(x0) + (r - rm) * derApprox + std::asin(0.5 * r * rinv)) * rm * 10.;
   };
 
-  for (int i = 0; i < 4; ++i) {  // the four sensor planes
-    auto* sb = new TBox(kSensor[i] - 0.035, -2.45, kSensor[i] + 0.035, 5.3);
-    sb->SetFillColorAlpha(kGray + 1, 0.55);
-    sb->Draw();
-  }
-  for (int m = 0; m < 2; ++m) {  // bracket each two-sensor module
-    auto* mb = new TBox(kSensor[2 * m] - 0.10, -2.75, kSensor[2 * m + 1] + 0.10, -2.55);
-    mb->SetFillColorAlpha(kGray + 2, 0.55);
+  // Two ladders, staggered in radius so that neighbouring ladders overlap in
+  // phi without gaps. Each is drawn as one module block with its two sensor
+  // planes inside. A track crosses ONE ladder, or both where they overlap.
+  for (int m = 0; m < 2; ++m) {
+    auto* mod = new TBox(kSensor[2 * m] - 0.06, -2.45, kSensor[2 * m + 1] + 0.06, 5.3);
+    mod->SetFillColorAlpha(kGray + 1, 0.22);
+    mod->Draw();
+    for (int i = 0; i < 2; ++i) {
+      auto* sb = new TBox(kSensor[2 * m + i] - 0.022, -2.45, kSensor[2 * m + i] + 0.022, 5.3);
+      sb->SetFillColorAlpha(kGray + 3, 0.65);
+      sb->Draw();
+    }
+    auto* mb = new TBox(kSensor[2 * m] - 0.06, -2.78, kSensor[2 * m + 1] + 0.06, -2.58);
+    mb->SetFillColorAlpha(kGray + 2, 0.6);
     mb->Draw();
   }
 
@@ -342,9 +348,12 @@ void FigInLayer(const char* out, double pt = 0.80, int layer = 3) {
   an.SetTextColor(kGray + 3);
   for (int m = 0; m < 2; ++m)
     an.DrawLatex(0.5 * (kSensor[2 * m] + kSensor[2 * m + 1]), -3.25,
-                 m == 0 ? "module = 2 sensors" : "module, outer ladder");
+                 m == 0 ? "inner ladder" : "outer ladder");
+  an.SetTextSize(0.0235);
+  an.DrawLatex(0.5 * (kSensor[0] + kSensor[1]), -3.72, "one module = 2 sensors");
+  an.SetTextSize(0.026);
   an.SetTextColor(kGray + 2);
-  an.DrawLatex(rm, -3.95, "r_{mean}  (no stub is here)");
+  an.DrawLatex(rm, -4.05, "r_{mean} : no stub here");
   an.SetTextSize(0.0245);
   an.SetTextColor(kGreen + 3);
   an.SetTextAlign(12);
@@ -353,13 +362,13 @@ void FigInLayer(const char* out, double pt = 0.80, int layer = 3) {
   an.SetTextAlign(32);
   an.DrawLatex(kStub[1] - 0.12, -0.75, "outside: lost");
 
-  auto* leg = new TLegend(0.135, 0.745, 0.88, 0.935);
+  auto* leg = new TLegend(0.125, 0.745, 0.86, 0.935);
   leg->SetBorderSize(0);
   leg->SetFillStyle(0);
   leg->SetMargin(0.06);
   leg->SetTextSize(0.0255);
-  leg->SetHeader(Form("L%d, p_{T} = %.2f GeV,  window %.1f mm,  geometry from the ntuple", layer + 1, pt, win));
-  leg->AddEntry(trk, "true track, with its stubs", "l");
+  leg->SetHeader(Form("L%d, p_{T} = %.2f GeV,  match window %.1f mm", layer + 1, pt, win));
+  leg->AddEntry(trk, "true track; markers are its stub on each ladder", "l");
   leg->AddEntry(gP, "where the algorithm looks", "l");
   leg->AddEntry(gWin, "match window around it", "f");
   leg->Draw();
