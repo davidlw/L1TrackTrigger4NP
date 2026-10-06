@@ -33,7 +33,7 @@ const double kCurv = 0.01139536;
 // barrel layer is built from modules staggered between an inner and an outer
 // radius, and rmean falls in the gap between them.
 const double kLadder[6][2] = {{21.89, 24.27}, {34.76, 37.13}, {49.93, 52.31},
-                              {66.99, 70.15}, {84.29, 87.45}, {106.58, 109.74}};
+                              {66.80, 69.97}, {84.29, 87.45}, {106.58, 109.74}};
 const double kRmean[6] = {24.9, 37.2, 52.3, 68.7, 86.0, 108.3};
 // rphimatchcut_[layer][seed 0 = L1L2], converted cm -> mm
 const double kWindow[6] = {0.0, 0.0, 1.0, 1.9, 4.0, 5.0};
@@ -765,7 +765,7 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
   // way round in phi. A module is 4.5 mm thick, well under a pixel here, so
   // each is drawn as a segment along its own plane.
   for (int m = -10; m <= 10; ++m) {
-    const double rr = (m % 2 == 0) ? 0.5 * (kSensor[0] + kSensor[1]) : 0.5 * (kSensor[2] + kSensor[3]);
+    const double rr = (m % 2 == 0) ? kSensor[0] : kSensor[2];
     const double half = 4.9;
     const double phiM = rot - 0.018 + m * (2 * half * 0.97) / rm;
     auto* ln = new TLine(rr * std::cos(phiM) + half * std::sin(phiM), rr * std::sin(phiM) - half * std::cos(phiM),
@@ -784,6 +784,28 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
     g->SetLineColor(kRed + 1);
     g->SetLineWidth(3);
     g->Draw("L same");
+
+    if (k == 1) {  // track B crosses the OUTER ladder of L4: mark that stub too
+      const double rs = kLadder[layer][1], xs = 0.5 * rs * rinv, xmL = 0.5 * kRmean[layer] * rinv;
+      const double pt_ = phi0 - std::asin(xs) + rot;
+      const double pp_ = phi0 - asin3(xmL) - (rs - kRmean[layer]) * 0.5 * rinv + rot;
+      auto* gl = new TGraph();
+      for (double r = kRmean[layer] - 9.; r <= kRmean[layer] + 9.; r += 1.0) {
+        double ph = phi0 - asin3(xmL) - (r - kRmean[layer]) * 0.5 * rinv + rot;
+        gl->SetPoint(gl->GetN(), r * std::cos(ph), r * std::sin(ph));
+      }
+      gl->SetLineColor(kOrange + 8);
+      gl->SetLineWidth(3);
+      gl->Draw("L same");
+      auto* ms = new TMarker(rs * std::cos(pt_), rs * std::sin(pt_), 20);
+      ms->SetMarkerSize(1.4);
+      ms->SetMarkerColor(kRed + 1);
+      ms->Draw();
+      auto* mp = new TMarker(rs * std::cos(pp_), rs * std::sin(pp_), 22);
+      mp->SetMarkerSize(1.7);
+      mp->SetMarkerColor(kOrange + 8);
+      mp->Draw();
+    }
 
     if (k == 0) {  // the seed stubs, and where the seed then projects
       for (int L = 0; L < 6; ++L) {
