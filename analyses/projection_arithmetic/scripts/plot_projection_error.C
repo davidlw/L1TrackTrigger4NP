@@ -112,9 +112,9 @@ void FigGeometry(const char* out) {
     gA2->SetPoint(gA2->GetN(), r * std::cos(asin3(x)), r * std::sin(asin3(x)));
   }
   gT2->SetLineColor(kAzure + 2);
-  gT2->SetLineWidth(3);
+  gT2->SetLineWidth(4);
   gT2->Draw("L same");
-  gA2->SetLineColor(kAzure + 2);
+  gA2->SetLineColor(kAzure - 9);
   gA2->SetLineWidth(2);
   gA2->SetLineStyle(11);
   gA2->Draw("L same");
@@ -160,14 +160,16 @@ void FigGeometry(const char* out) {
   an.SetTextSize(0.030);
   an.DrawLatex(23.5, 11.0, "asin(x)");
 
-  auto* leg = new TLegend(0.355, 0.735, 0.985, 0.915);
+  auto* leg = new TLegend(0.40, 0.715, 0.985, 0.915);
   leg->SetBorderSize(0);
   leg->SetFillStyle(0);
+  leg->SetMargin(0.09);
   leg->SetTextSize(0.0262);
   leg->SetHeader("x = r #upoint r_{inv}/2 = r / 2R");
   leg->AddEntry(gT, "0.5 GeV, true helix   #phi_{0} #minus asin(x)", "l");
   leg->AddEntry(gA, "0.5 GeV, as projected   #phi_{0} #minus (x + x^{3}/6)", "l");
-  leg->AddEntry(gT2, "2 GeV, true and projected (same curve)", "l");
+  leg->AddEntry(gT2, "2 GeV, true helix", "l");
+  leg->AddEntry(gA2, "2 GeV, as projected (coincides, 0.2 mm at L6)", "l");
   leg->Draw();
 
   TLatex tx;
@@ -201,6 +203,7 @@ void FigVsPt(const char* out) {
   auto* leg = new TLegend(0.55, 0.60, 0.97, 0.90);
   leg->SetBorderSize(0);
   leg->SetFillStyle(0);
+  leg->SetMargin(0.09);
   leg->SetTextSize(0.031);
   leg->SetHeader("L1L2 seed, 3rd order");
   for (int L = 2; L < 6; ++L) {
@@ -279,6 +282,7 @@ void FigInLayer(const char* out, double pt = 0.7, int layer = 3) {
   auto* leg = new TLegend(0.165, 0.775, 0.97, 0.895);
   leg->SetBorderSize(0);
   leg->SetFillStyle(0);
+  leg->SetMargin(0.09);
   leg->SetTextSize(0.029);
   leg->AddEntry(gBoth, "series offset + small-angle slope  (what the code does)", "l");
   leg->AddEntry(gSlope, "small-angle slope only  (series made exact)", "l");
