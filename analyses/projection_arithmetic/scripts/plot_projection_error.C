@@ -29,6 +29,11 @@ namespace {
 
 // 0.01 * c * B = 0.0114 GeV cm^-1;  rinv [1/cm] = kCurv / pT [GeV]
 const double kCurv = 0.01139536;
+// Ladder radii measured from the stub positions in an EPOS pPb ntuple: each
+// barrel layer is built from modules staggered between an inner and an outer
+// radius, and rmean falls in the gap between them.
+const double kLadder[6][2] = {{21.89, 24.27}, {34.76, 37.13}, {49.93, 52.31},
+                              {66.99, 70.15}, {84.29, 87.45}, {106.58, 109.74}};
 const double kRmean[6] = {24.9, 37.2, 52.3, 68.7, 86.0, 108.3};
 // rphimatchcut_[layer][seed 0 = L1L2], converted cm -> mm
 const double kWindow[6] = {0.0, 0.0, 1.0, 1.9, 4.0, 5.0};
@@ -796,25 +801,28 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
     gp->SetLineStyle(11);
     gp->Draw("L same");
 
-    if (k == 0) {  // mark the seed stubs and every projection it makes
+    if (k == 0) {  // the seed stubs, and where the seed then projects
       for (int L = 0; L < 6; ++L) {
-        const double xx = 0.5 * kRmean[L] * rinv;
-        if (xx >= 1.)
+        // a stub sits on a ladder, never at rmean; take the inner one
+        const double rs = kLadder[L][0], xs = 0.5 * rs * rinv, xmL = 0.5 * kRmean[L] * rinv;
+        if (xs >= 1. || xmL >= 1.)
           continue;
-        const double pt_ = phi0 - std::asin(xx) + rot, pp_ = phi0 - asin3(xx) + rot;
+        const double pt_ = phi0 - std::asin(xs) + rot;
+        // the projection is evaluated at rmean, then stepped linearly to rs
+        const double pp_ = phi0 - asin3(xmL) - (rs - kRmean[L]) * 0.5 * rinv + rot;
         const bool seed = (L < 2);
-        auto* ms = new TMarker(kRmean[L] * std::cos(pt_), kRmean[L] * std::sin(pt_), 20);
-        ms->SetMarkerSize(seed ? 2.0 : 1.4);
-        ms->SetMarkerColor(seed ? kRed + 1 : kRed + 1);
+        auto* ms = new TMarker(rs * std::cos(pt_), rs * std::sin(pt_), 20);
+        ms->SetMarkerSize(seed ? 1.9 : 1.4);
+        ms->SetMarkerColor(kRed + 1);
         ms->Draw();
         if (seed) {
-          auto* ring = new TMarker(kRmean[L] * std::cos(pt_), kRmean[L] * std::sin(pt_), 24);
+          auto* ring = new TMarker(rs * std::cos(pt_), rs * std::sin(pt_), 24);
           ring->SetMarkerSize(3.0);
           ring->SetMarkerColor(kRed + 1);
           ring->Draw();
           continue;
         }
-        auto* mp = new TMarker(kRmean[L] * std::cos(pp_), kRmean[L] * std::sin(pp_), 21);
+        auto* mp = new TMarker(rs * std::cos(pp_), rs * std::sin(pp_), 21);
         mp->SetMarkerSize(1.3);
         mp->SetMarkerColor(kOrange + 8);
         mp->Draw();
