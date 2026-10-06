@@ -209,7 +209,20 @@ Three standalone figures, each PDF and PNG, all from `scripts/plot_projection_er
 | `projection_error_vs_pt` | the position error versus pT for L3-L6, against the real `rphimatchcut_` windows. Where a curve crosses its own dotted line, that layer stops matching. |
 | `projection_error_in_layer` | inside L4 at 0.7 GeV. The shaded band is the range of radii a stub can have in one layer, `\|dr\| <= drmax = 3.75 cm`; the dotted vertical line is `rmean`, the single radius at which the projection is evaluated. Two arrows mark the two errors: at `rmean` the blue curve is zero by construction, so the gap to the red one there is the series truncation; away from `rmean` both rise together, and that common tilt is `slope x dr`. Dotted horizontals are the match window. |
 
+| `projection_slope` | where `1/sqrt(1-x^2)` comes from. `asin(x)` is the angle between the track and the radial direction where it crosses the layer, so the factor is `sec(theta)`. At 2 GeV the crossing angle at L4 is 11 deg and the secant is 1.02; at 0.5 GeV it is 52 deg and the secant is 1.61, so the direction the code assumes is 60% too shallow and the prediction drifts 20 mm across the layer, against a 1.9 mm window. |
+
 ```
-root -l -b -q 'plot_projection_error.C()'     # all three
+root -l -b -q 'plot_projection_error.C()'     # all four
 root -l -b -q 'plot_projection_error.C(1)'    # just the geometry
 ```
+
+**What "stub radius" means.** A barrel layer is not a mathematical cylinder.
+Its modules sit on ladders staggered between two radii so they overlap in phi
+without gaps, and toward the ends of the barrel they are tilted to point at the
+interaction region. A stub is formed from two clusters in the two sensors of one
+module, so its radius is that module's actual radial position, which differs
+from the layer's nominal `rmean` by up to `drmax = 3.75 cm`. The emulation
+stores exactly that offset: the stub word carries `r` as a 7-bit signed number
+with `krbarrel = 2*drmax/2^7 = 0.059 cm` per count. The projection is evaluated
+once, at `rmean`, so every stub needs the linear step to its own radius -- which
+is why the slope matters at all.

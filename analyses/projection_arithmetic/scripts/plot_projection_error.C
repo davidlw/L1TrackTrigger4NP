@@ -237,120 +237,255 @@ void FigVsPt(const char* out) {
 }
 
 // ---------------------------------------------------------------------------
-// Figure 3 -- inside one layer. Two separate errors: the offset at the nominal
-// radius (the series) and the tilt across the layer (the wrong slope).
+// Figure 3 -- one layer, drawn in the frame of the true track.
+//
+// The track's azimuth sweeps about 40 mm across a layer, far more than the
+// 1.9 mm match window, so absolute position shows nothing. Measuring from the
+// true track instead puts the track on y = 0, with its stubs on it, and the
+// question becomes whether the window around the PREDICTED position still
+// contains them.
+//
+// The prediction is wrong in two ways: by the series truncation, the same at
+// every radius, and by the slope, which grows with dr. At 0.85 GeV the first
+// is 1.4 mm against a 1.9 mm window -- survivable alone -- and the second
+// carries the outer stubs out of the window entirely.
 // ---------------------------------------------------------------------------
-void FigInLayer(const char* out, double pt = 0.7, int layer = 3) {
+void FigInLayer(const char* out, double pt = 0.85, int layer = 3) {
   auto* c = new TCanvas("clay", "", 760, 650);
   c->SetLeftMargin(0.13);
   c->SetRightMargin(0.04);
   c->SetBottomMargin(0.12);
-  c->SetTopMargin(0.08);
+  c->SetTopMargin(0.06);
 
   const double rm = kRmean[layer], rinv = kCurv / pt, x0 = 0.5 * rm * rinv;
-  auto* fr = gPad->DrawFrame(rm - kDrMax - 0.9, -9, rm + kDrMax + 0.9, 11);
+  const double win = kWindow[layer], lo = rm - kDrMax - 0.9, hi = rm + kDrMax + 0.9;
+  const double derApprox = -0.5 * rinv;  // what the code uses for dphi/dr
+
+  auto* fr = gPad->DrawFrame(lo, -5.5, hi, 7.5);
   fr->GetXaxis()->SetTitle("stub radius r_{stub} [cm]");
-  fr->GetYaxis()->SetTitle("predicted #minus true position [mm]");
+  fr->GetYaxis()->SetTitle("azimuthal position, relative to the true track [mm]");
   fr->GetYaxis()->SetTitleOffset(1.30);
 
-  const double derApprox = -0.5 * rinv;  // what the code uses
+  // predicted position, measured from the true track: series offset + slope*dr
+  auto Pred = [&](double r) {
+    return (-asin3(x0) + (r - rm) * derApprox + std::asin(0.5 * r * rinv)) * rm * 10.;
+  };
 
-  auto *gBoth = new TGraph(), *gSlope = new TGraph();
-  for (double r = rm - kDrMax; r <= rm + kDrMax; r += 0.75) {
-    double truePhi = -std::asin(0.5 * r * rinv), dr = r - rm;
-    gBoth->SetPoint(gBoth->GetN(), r, (-asin3(x0) + dr * derApprox - truePhi) * rm * 10.);
-    gSlope->SetPoint(gSlope->GetN(), r, (-std::asin(x0) + dr * derApprox - truePhi) * rm * 10.);
-  }
-
-  const double lo = rm - kDrMax - 0.9, hi = rm + kDrMax + 0.9;
-
-  // the band of radii a stub can have in this layer. The projection is
-  // evaluated once, at rmean; MatchProcessor then steps to the stub's own
-  // radius, and the stub word stores that offset as a 7-bit signed number
-  // over +-drmax.
-  auto* band = new TBox(rm - kDrMax, -9, rm + kDrMax, 11);
+  auto* band = new TBox(rm - kDrMax, -5.5, rm + kDrMax, 7.5);  // the layer
   band->SetFillColorAlpha(kAzure + 1, 0.05);
   band->Draw();
 
-  auto* zero = new TLine(lo, 0, hi, 0);
-  zero->SetLineColor(kGray + 2);
-  zero->Draw();
-  for (int s : {-1, 1}) {
-    auto* w = new TLine(lo, s * kWindow[layer], hi, s * kWindow[layer]);
-    w->SetLineStyle(2);
-    w->SetLineColor(kGray + 3);
-    w->Draw();
+  // the match window, drawn around where the algorithm actually looks
+  auto* gWin = new TGraph();
+  for (double r = lo; r <= hi; r += 0.25)
+    gWin->SetPoint(gWin->GetN(), r, Pred(r) + win);
+  for (double r = hi; r >= lo; r -= 0.25)
+    gWin->SetPoint(gWin->GetN(), r, Pred(r) - win);
+  gWin->SetFillColorAlpha(kOrange + 7, 0.25);
+  gWin->Draw("F same");
+
+  auto* gP = new TGraph();  // where the algorithm looks
+  for (double r = lo; r <= hi; r += 0.75)
+    gP->SetPoint(gP->GetN(), r, Pred(r));
+  gP->SetLineColor(kOrange + 8);
+  gP->SetLineWidth(3);
+  gP->SetLineStyle(11);
+  gP->Draw("L same");
+
+  auto* trk = new TLine(lo, 0, hi, 0);  // the true track, by construction
+  trk->SetLineColor(kRed + 1);
+  trk->SetLineWidth(4);
+  trk->Draw();
+
+  // a handful of stubs, at radii spread across the layer
+  auto *gOk = new TGraph(), *gBad = new TGraph();
+  const double drs[5] = {-3.2, -1.6, 0.0, 1.6, 3.2};
+  for (double dr : drs) {
+    double r = rm + dr;
+    ((std::abs(Pred(r)) < win) ? gOk : gBad)->SetPoint(((std::abs(Pred(r)) < win) ? gOk : gBad)->GetN(), r, 0.);
   }
-  auto* vm = new TLine(rm, -9, rm, 11);
+  gOk->SetMarkerStyle(20);
+  gOk->SetMarkerSize(2.0);
+  gOk->SetMarkerColor(kGreen + 3);
+  gBad->SetMarkerStyle(20);
+  gBad->SetMarkerSize(2.0);
+  gBad->SetMarkerColor(kGray + 2);
+  gOk->Draw("P same");
+  gBad->Draw("P same");
+  for (double dr : drs) {  // cross out the ones that are lost
+    double r = rm + dr;
+    if (std::abs(Pred(r)) < win)
+      continue;
+    auto* xx = new TMarker(r, 0, 5);
+    xx->SetMarkerColor(kRed + 2);
+    xx->SetMarkerSize(2.4);
+    xx->Draw();
+  }
+
+  auto* vm = new TLine(rm, -5.5, rm, 7.5);
   vm->SetLineStyle(3);
   vm->SetLineColor(kGray + 2);
   vm->Draw();
 
-  // where the projection is actually evaluated
-  auto* amean = new TArrow(rm, -7.4, rm, -5.6, 0.015, "|>");
-  amean->SetLineColor(kGray + 3);
-  amean->SetFillColor(kGray + 3);
-  amean->SetLineWidth(2);
-  amean->Draw();
-
-  // the extent of the band
-  auto* aspan = new TArrow(rm - kDrMax, -8.3, rm + kDrMax, -8.3, 0.012, "<|>");
-  aspan->SetLineColor(kAzure + 2);
-  aspan->SetFillColor(kAzure + 2);
-  aspan->Draw();
-
-  gSlope->SetLineColor(kAzure + 2);
-  gSlope->SetLineWidth(3);
-  gSlope->SetLineStyle(11);
-  gSlope->Draw("L same");
-  gBoth->SetLineColor(kRed + 1);
-  gBoth->SetLineWidth(4);
-  gBoth->Draw("L same");
-
-  auto* leg = new TLegend(0.145, 0.805, 0.97, 0.915);
-  leg->SetBorderSize(0);
-  leg->SetFillStyle(0);
-  leg->SetMargin(0.09);
-  leg->SetTextSize(0.029);
-  leg->AddEntry(gBoth, "series offset + small-angle slope  (what the code does)", "l");
-  leg->AddEntry(gSlope, "small-angle slope only  (series made exact)", "l");
-  leg->Draw();
-
-  // Two arrows, two errors. At rmean the blue curve is zero by construction,
-  // so the gap to the red curve there is exactly the series truncation. Away
-  // from rmean both curves rise together: that common tilt is the slope error.
-  const double offMM = (-asin3(x0) + std::asin(x0)) * rm * 10.;
+  // the two errors, where each is defined
+  const double offMM = Pred(rm);
   auto* aoff = new TArrow(rm + 0.12, 0, rm + 0.12, offMM, 0.012, "<|>");
   aoff->SetLineColor(kRed + 2);
   aoff->SetFillColor(kRed + 2);
   aoff->SetLineWidth(2);
   aoff->Draw();
-
-  const double rSlope = rm + 2.8;
-  const double slopeMM = (-std::asin(x0) + (rSlope - rm) * derApprox + std::asin(0.5 * rSlope * rinv)) * rm * 10.;
-  auto* aslp = new TArrow(rSlope, 0, rSlope, slopeMM, 0.012, "<|>");
+  const double rS = rm + 3.2;
+  auto* aslp = new TArrow(rS, offMM, rS, Pred(rS), 0.012, "<|>");
   aslp->SetLineColor(kAzure + 3);
   aslp->SetFillColor(kAzure + 3);
   aslp->SetLineWidth(2);
   aslp->Draw();
+  auto* href = new TLine(rm, offMM, rS, offMM);
+  href->SetLineColor(kAzure + 3);
+  href->SetLineStyle(3);
+  href->Draw();
 
   TLatex an;
   an.SetTextSize(0.027);
-  an.SetTextColor(kGray + 3);
-  an.SetTextAlign(22);
-  an.DrawLatex(rm, -4.8, "projection evaluated here, r_{mean}");
-  an.SetTextColor(kAzure + 2);
-  an.DrawLatex(rm, -7.6, Form("stub radii in this layer: |dr| #leq %.2f cm", kDrMax));
   an.SetTextAlign(12);
   an.SetTextColor(kRed + 2);
-  an.DrawLatex(rm + 0.45, 0.55 * offMM, "series");
+  an.DrawLatex(rm + 0.4, 0.5 * offMM, "series");
   an.SetTextColor(kAzure + 3);
-  an.DrawLatex(rSlope + 0.25, 0.55 * slopeMM, "slope #times dr");
+  an.SetTextAlign(32);
+  an.DrawLatex(rS - 0.25, 0.5 * (offMM + Pred(rS)), "slope #times dr");
+  an.SetTextAlign(22);
+  an.SetTextColor(kGray + 3);
+  an.DrawLatex(rm, -4.6, Form("one layer:  |dr| #leq %.2f cm", kDrMax));
+  an.SetTextColor(kGray + 2);
+  an.DrawLatex(rm - 1.5, -3.3, "r_{mean}");
 
-  TLatex tx;
-  tx.SetNDC();
-  tx.SetTextSize(0.029);
-  tx.SetTextColor(kGray + 2);
+  auto* leg = new TLegend(0.145, 0.735, 0.97, 0.935);
+  leg->SetBorderSize(0);
+  leg->SetFillStyle(0);
+  leg->SetMargin(0.07);
+  leg->SetTextSize(0.0275);
+  leg->SetHeader(Form("L%d, p_{T} = %.2f GeV,  match window %.1f mm", layer + 1, pt, win));
+  leg->AddEntry(trk, "true track, with its stubs", "l");
+  leg->AddEntry(gP, "where the algorithm looks", "l");
+  leg->AddEntry(gWin, "match window around it", "f");
+  leg->AddEntry(gBad, "stub outside the window: lost", "p");
+  leg->Draw();
+
+  Save(c, out);
+}
+
+// ---------------------------------------------------------------------------
+// Figure 4 -- where 1/sqrt(1-x^2) comes from, and why it only matters at low pT.
+//
+// Differentiating phi(r) = phi0 - asin(x) with x = r*rinv/2 gives
+//
+//     dphi/dr = -(rinv/2) / sqrt(1-x^2)
+//
+// and the factor has a geometric meaning: asin(x) is the angle between the
+// track and the radial direction where it crosses the layer, so
+//
+//     1/sqrt(1-x^2) = 1 / cos(crossing angle) = sec(crossing angle)
+//
+// The code keeps only -(rinv/2), i.e. it assumes the track crosses the layer
+// radially. At 2 GeV the crossing angle at L4 is 11 deg and the secant is
+// 1.02 -- a 2% error nobody would notice. At 0.5 GeV the angle is 52 deg and
+// the secant is 1.61, so the assumed direction is 60% too shallow and the
+// prediction drifts away across the thickness of the layer.
+// ---------------------------------------------------------------------------
+void FigSlope(const char* out, int layer = 3) {
+  // equal x and y scales, so the crossing angle on the page is the real one
+  auto* c = new TCanvas("cslp", "", 700, 700);
+  c->SetLeftMargin(0.14);
+  c->SetRightMargin(0.04);
+  c->SetBottomMargin(0.12);
+  c->SetTopMargin(0.06);
+
+  const double rm = kRmean[layer], win = kWindow[layer];
+  const double H = 5.6;
+  auto* fr = gPad->DrawFrame(-H, -H, H, H);
+  fr->GetXaxis()->SetTitle("r_{stub} #minus r_{mean}  [cm]   (radially outward #rightarrow)");
+  fr->GetYaxis()->SetTitle("azimuthal displacement across the layer, r#Delta#phi [cm]");
+  fr->GetYaxis()->SetTitleOffset(1.35);
+
+  auto* band = new TBox(-kDrMax, -H, kDrMax, H);  // the thickness of one layer
+  band->SetFillColorAlpha(kAzure + 1, 0.05);
+  band->Draw();
+  auto* rad = new TLine(-H, 0, 2.4, 0);  // the radial direction
+  rad->SetLineColor(kGray + 2);
+  rad->SetLineStyle(3);
+  rad->Draw();
+  auto* vz = new TLine(0, -H, 0, H);  // r = rmean
+  vz->SetLineColor(kGray + 2);
+  vz->Draw();
+
+  const int kN = 2;
+  const double pts[kN] = {2.0, 0.5};
+  const int cols[kN] = {kAzure + 2, kRed + 1};
+  auto* leg = new TLegend(0.145, 0.775, 0.97, 0.945);
+  leg->SetBorderSize(0);
+  leg->SetFillStyle(0);
+  leg->SetMargin(0.06);
+  leg->SetTextSize(0.0255);
+  leg->SetHeader(Form("L%d:  d#phi/dr = #minus(r_{inv}/2) / #sqrt{1#minus x^{2}} = #minus(r_{inv}/2) #upoint sec#theta", layer + 1));
+
+  TLatex an;
+  an.SetTextSize(0.026);
+
+  for (int k = 0; k < kN; ++k) {
+    const double rinv = kCurv / pts[k], x0 = 0.5 * rm * rinv;
+    const double theta = std::asin(x0), secT = 1. / std::cos(theta);
+
+    auto *gT = new TGraph(), *gA = new TGraph();
+    for (double dr = -kDrMax; dr <= kDrMax + 1e-9; dr += 0.75) {
+      double r = rm + dr;
+      gT->SetPoint(gT->GetN(), dr, (std::asin(0.5 * r * rinv) - std::asin(x0)) * rm);
+      gA->SetPoint(gA->GetN(), dr, (0.5 * rinv * dr) * rm);
+    }
+    gT->SetLineColor(cols[k]);
+    gT->SetLineWidth(4);
+    gT->Draw("L same");
+    gA->SetLineColor(cols[k]);
+    gA->SetLineWidth(3);
+    gA->SetLineStyle(11);
+    gA->Draw("L same");
+
+    double gap = (std::asin(0.5 * (rm + kDrMax) * rinv) - std::asin(x0) - 0.5 * rinv * kDrMax) * rm * 10.;
+    leg->AddEntry(gT, Form("%.1f GeV:  #theta = %.0f#circ,  sec#theta = %.2f,  misses by %.1f mm at the layer edge",
+                           pts[k], theta * TMath::RadToDeg(), secT, gap), "l");
+
+    // the crossing angle, measured from the radial direction
+    double arad = (k == 0) ? 2.2 : 3.6;
+    auto* arc = new TArc(0, 0, arad, 0, theta * TMath::RadToDeg());
+    arc->SetFillStyle(0);
+    arc->SetLineColor(cols[k]);
+    arc->Draw("only");
+    an.SetTextColor(cols[k]);
+    an.SetTextAlign(12);
+    double am = 0.5 * theta;
+    an.DrawLatex((arad + 0.3) * std::cos(am), (arad + 0.3) * std::sin(am), Form("#theta = %.0f#circ", theta * TMath::RadToDeg()));
+  }
+  leg->Draw();
+
+  // the match window, for scale
+  auto* wb = new TBox(4.75, -win / 10. - 2.6, 5.05, win / 10. - 2.6);
+  wb->SetFillColorAlpha(kOrange + 7, 0.7);
+  wb->Draw();
+  an.SetTextColor(kOrange + 8);
+  an.SetTextAlign(32);
+  an.DrawLatex(4.60, -2.0, Form("#pm%.1f mm", win));
+  an.DrawLatex(4.60, -2.6, "window,");
+  an.DrawLatex(4.60, -3.2, "to scale");
+
+  an.SetTextColor(kGray + 3);
+  an.SetTextAlign(12);
+  an.DrawLatex(-5.25, -3.6, "solid: true track");
+  an.DrawLatex(-5.25, -4.25, "dashed: the direction the code assumes");
+  an.SetTextAlign(12);
+  an.DrawLatex(-5.25, 0.42, "radial");
+  an.SetTextAlign(22);
+  an.SetTextColor(kAzure + 3);
+  an.DrawLatex(0, -5.15, Form("one layer:  |r_{stub} #minus r_{mean}| #leq %.2f cm", kDrMax));
+
   Save(c, out);
 }
 
@@ -367,6 +502,8 @@ void plot_projection_error(int which = 0) {
     FigVsPt("../figures/projection_error_vs_pt");
   if (which == 0 || which == 3)
     FigInLayer("../figures/projection_error_in_layer");
+  if (which == 0 || which == 4)
+    FigSlope("../figures/projection_slope");
 
   if (which == 0) {
     printf("\nprojection error [mm], 3rd order, against the window\n%8s", "pT");
