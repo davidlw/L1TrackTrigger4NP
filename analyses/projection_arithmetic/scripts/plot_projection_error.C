@@ -255,13 +255,15 @@ void FigVsPt(const char* out) {
 // whether the window around the PREDICTED position still contains them.
 // ---------------------------------------------------------------------------
 void FigInLayer(const char* out, double pt = 0.80, int layer = 3) {
-  auto* c = new TCanvas("clay", "", 820, 650);
-  c->SetLeftMargin(0.125);
-  c->SetRightMargin(0.035);
-  c->SetBottomMargin(0.12);
-  c->SetTopMargin(0.06);
+  auto* c = new TCanvas("clay", "", 1250, 660);
+  auto* p1 = new TPad("p1", "", 0.000, 0.155, 0.505, 1.0);
+  auto* p2 = new TPad("p2", "", 0.505, 0.155, 1.000, 1.0);
+  auto* p3 = new TPad("p3", "", 0.000, 0.000, 1.000, 0.155);
+  p1->Draw();
+  p2->Draw();
+  p3->Draw();
 
-  // measured sensor radii of L4; stubs sit at the inner sensor of each module
+  // measured sensor radii of L4; a stub sits at the inner sensor of its module
   const double kSensor[4] = {66.80, 67.25, 69.97, 70.41};
   const double kStub[2] = {66.80, 69.97};
 
@@ -269,109 +271,143 @@ void FigInLayer(const char* out, double pt = 0.80, int layer = 3) {
   const double win = kWindow[layer], lo = 65.9, hi = 71.7;
   const double derApprox = -0.5 * rinv;  // the small-angle slope the code uses
 
-  auto* fr = gPad->DrawFrame(lo, -4.3, hi, 5.3);
-  fr->GetXaxis()->SetTitle("r  [cm]   (radially outward #rightarrow)");
-  fr->GetYaxis()->SetTitle("azimuthal position, relative to the true track [mm]");
-  fr->GetYaxis()->SetTitleOffset(1.25);
-
   // predicted position measured from the true track: series offset + slope*dr
   auto Pred = [&](double r) {
     return (-asin3(x0) + (r - rm) * derApprox + std::asin(0.5 * r * rinv)) * rm * 10.;
   };
 
-  // Two ladders, staggered in radius so that neighbouring ladders overlap in
-  // phi without gaps. Each is drawn as one module block with its two sensor
-  // planes inside. A track crosses ONE ladder, or both where they overlap.
-  for (int m = 0; m < 2; ++m) {
-    auto* mod = new TBox(kSensor[2 * m] - 0.06, -2.45, kSensor[2 * m + 1] + 0.06, 5.3);
-    mod->SetFillColorAlpha(kGray + 1, 0.22);
-    mod->Draw();
-    for (int i = 0; i < 2; ++i) {
-      auto* sb = new TBox(kSensor[2 * m + i] - 0.022, -2.45, kSensor[2 * m + i] + 0.022, 5.3);
-      sb->SetFillColorAlpha(kGray + 3, 0.65);
-      sb->Draw();
+  // Two tracks at different azimuth, each crossing one ladder. Each panel is
+  // drawn in the frame of its own track, so that track is the line y = 0.
+  for (int which = 0; which < 2; ++which) {
+    (which == 0 ? p1 : p2)->cd();
+    gPad->SetLeftMargin(which == 0 ? 0.155 : 0.090);
+    gPad->SetRightMargin(0.035);
+    gPad->SetBottomMargin(0.125);
+    gPad->SetTopMargin(0.085);
+
+    auto* fr = gPad->DrawFrame(lo, -4.3, hi, 5.3);
+    fr->GetXaxis()->SetTitle("r  [cm]   (radially outward #rightarrow)");
+    fr->GetXaxis()->SetTitleSize(0.047);
+    fr->GetXaxis()->SetLabelSize(0.042);
+    fr->GetYaxis()->SetTitleSize(0.047);
+    fr->GetYaxis()->SetLabelSize(0.042);
+    if (which == 0) {
+      fr->GetYaxis()->SetTitle("azimuthal position, relative to this track [mm]");
+      fr->GetYaxis()->SetTitleOffset(1.25);
     }
-    auto* mb = new TBox(kSensor[2 * m] - 0.06, -2.78, kSensor[2 * m + 1] + 0.06, -2.58);
-    mb->SetFillColorAlpha(kGray + 2, 0.6);
-    mb->Draw();
+
+    for (int m = 0; m < 2; ++m) {  // both ladders; the crossed one is solid
+      const bool hit = (m == which);
+      auto* mod = new TBox(kSensor[2 * m] - 0.06, -2.45, kSensor[2 * m + 1] + 0.06, 5.3);
+      mod->SetFillColorAlpha(kGray + 1, hit ? 0.30 : 0.10);
+      mod->Draw();
+      for (int i = 0; i < 2; ++i) {
+        auto* sb = new TBox(kSensor[2 * m + i] - 0.022, -2.45, kSensor[2 * m + i] + 0.022, 5.3);
+        sb->SetFillColorAlpha(kGray + 3, hit ? 0.75 : 0.22);
+        sb->Draw();
+      }
+      auto* mb = new TBox(kSensor[2 * m] - 0.06, -2.78, kSensor[2 * m + 1] + 0.06, -2.58);
+      mb->SetFillColorAlpha(kGray + 2, hit ? 0.7 : 0.22);
+      mb->Draw();
+    }
+
+    auto* gWin = new TGraph();  // the match window, around where the code looks
+    for (double r = lo; r <= hi; r += 0.25)
+      gWin->SetPoint(gWin->GetN(), r, Pred(r) + win);
+    for (double r = hi; r >= lo; r -= 0.25)
+      gWin->SetPoint(gWin->GetN(), r, Pred(r) - win);
+    gWin->SetFillColorAlpha(kOrange + 7, 0.25);
+    gWin->Draw("F same");
+
+    auto* gP = new TGraph();
+    for (double r = lo; r <= hi; r += 0.58)
+      gP->SetPoint(gP->GetN(), r, Pred(r));
+    gP->SetLineColor(kOrange + 8);
+    gP->SetLineWidth(3);
+    gP->SetLineStyle(11);
+    gP->Draw("L same");
+
+    auto* trk = new TLine(lo, 0, hi, 0);
+    trk->SetLineColor(kRed + 1);
+    trk->SetLineWidth(4);
+    trk->Draw();
+
+    auto* vm = new TLine(rm, -3.5, rm, 5.3);
+    vm->SetLineStyle(3);
+    vm->SetLineColor(kGray + 2);
+    vm->Draw();
+
+    const double rs = kStub[which];
+    const bool ok = std::abs(Pred(rs)) < win;
+    auto* mk = new TMarker(rs, 0, 20);
+    mk->SetMarkerSize(2.3);
+    mk->SetMarkerColor(ok ? kGreen + 3 : kGray + 3);
+    mk->Draw();
+    if (!ok) {
+      auto* xx = new TMarker(rs, 0, 5);
+      xx->SetMarkerColor(kRed + 2);
+      xx->SetMarkerSize(2.7);
+      xx->Draw();
+    }
+    // how far the stub is from where the algorithm looked
+    auto* amiss = new TArrow(rs, 0, rs, Pred(rs), 0.013, "<|>");
+    amiss->SetLineColor(ok ? kGreen + 3 : kRed + 2);
+    amiss->SetFillColor(ok ? kGreen + 3 : kRed + 2);
+    amiss->SetLineWidth(2);
+    amiss->Draw();
+
+    TLatex an;
+    an.SetTextSize(0.040);
+    an.SetTextAlign(22);
+    an.SetTextColor(kGray + 3);
+    for (int m = 0; m < 2; ++m)
+      an.DrawLatex(0.5 * (kSensor[2 * m] + kSensor[2 * m + 1]), -3.30, m == 0 ? "inner ladder" : "outer ladder");
+    an.SetTextColor(kGray + 2);
+    an.DrawLatex(rm, -4.05, "r_{mean}");
+    an.SetTextSize(0.043);
+    an.SetTextColor(ok ? kGreen + 3 : kRed + 2);
+    an.SetTextAlign(which == 0 ? 12 : 32);
+    an.DrawLatex(rs + (which == 0 ? 0.18 : -0.18), 0.5 * Pred(rs),
+                 ok ? Form("%.1f mm: matched", std::abs(Pred(rs))) : Form("%.1f mm: lost", std::abs(Pred(rs))));
+    an.SetTextSize(0.044);
+    an.SetTextColor(kBlack);
+    an.SetTextAlign(12);
+    an.DrawLatex(lo + 0.15, 4.75,
+                 which == 0 ? "track A, crossing the inner ladder" : "track B, crossing the outer ladder");
+    an.SetTextSize(0.036);
+    an.SetTextColor(kGray + 3);
+    an.DrawLatex(lo + 0.15, 3.95, Form("dr = %+.2f cm", rs - rm));
+
   }
 
-  auto* gWin = new TGraph();  // the match window, around where the code looks
-  for (double r = lo; r <= hi; r += 0.25)
-    gWin->SetPoint(gWin->GetN(), r, Pred(r) + win);
-  for (double r = hi; r >= lo; r -= 0.25)
-    gWin->SetPoint(gWin->GetN(), r, Pred(r) - win);
-  gWin->SetFillColorAlpha(kOrange + 7, 0.25);
-  gWin->Draw("F same");
-
-  auto* gP = new TGraph();
-  for (double r = lo; r <= hi; r += 0.58)
-    gP->SetPoint(gP->GetN(), r, Pred(r));
-  gP->SetLineColor(kOrange + 8);
-  gP->SetLineWidth(3);
-  gP->SetLineStyle(11);
-  gP->Draw("L same");
-
-  auto* trk = new TLine(lo, 0, hi, 0);  // the true track, by construction
-  trk->SetLineColor(kRed + 1);
-  trk->SetLineWidth(4);
-  trk->Draw();
-
-  auto* vm = new TLine(rm, -3.5, rm, 5.3);
-  vm->SetLineStyle(3);
-  vm->SetLineColor(kGray + 2);
-  vm->Draw();
-
-  auto *gOk = new TGraph(), *gBad = new TGraph();
-  for (double r : kStub)
-    ((std::abs(Pred(r)) < win) ? gOk : gBad)->SetPoint(((std::abs(Pred(r)) < win) ? gOk : gBad)->GetN(), r, 0.);
-  gOk->SetMarkerStyle(20);
-  gOk->SetMarkerSize(2.2);
-  gOk->SetMarkerColor(kGreen + 3);
-  gBad->SetMarkerStyle(20);
-  gBad->SetMarkerSize(2.2);
-  gBad->SetMarkerColor(kGray + 3);
-  gOk->Draw("P same");
-  gBad->Draw("P same");
-  for (double r : kStub) {
-    if (std::abs(Pred(r)) < win)
-      continue;
-    auto* xx = new TMarker(r, 0, 5);
-    xx->SetMarkerColor(kRed + 2);
-    xx->SetMarkerSize(2.6);
-    xx->Draw();
-  }
-
-  TLatex an;
-  an.SetTextSize(0.026);
-  an.SetTextAlign(22);
-  an.SetTextColor(kGray + 3);
-  for (int m = 0; m < 2; ++m)
-    an.DrawLatex(0.5 * (kSensor[2 * m] + kSensor[2 * m + 1]), -3.25,
-                 m == 0 ? "inner ladder" : "outer ladder");
-  an.SetTextSize(0.0235);
-  an.DrawLatex(0.5 * (kSensor[0] + kSensor[1]), -3.72, "one module = 2 sensors");
-  an.SetTextSize(0.026);
-  an.SetTextColor(kGray + 2);
-  an.DrawLatex(rm, -4.05, "r_{mean} : no stub here");
-  an.SetTextSize(0.0245);
-  an.SetTextColor(kGreen + 3);
-  an.SetTextAlign(12);
-  an.DrawLatex(kStub[0] + 0.12, -0.75, "inside the window");
-  an.SetTextColor(kRed + 2);
-  an.SetTextAlign(32);
-  an.DrawLatex(kStub[1] - 0.12, -0.75, "outside: lost");
-
-  auto* leg = new TLegend(0.125, 0.745, 0.86, 0.935);
+  // one shared legend, in its own strip so nothing overlaps the panels
+  p3->cd();
+  auto* lt = new TLine();
+  lt->SetLineColor(kRed + 1);
+  lt->SetLineWidth(4);
+  auto* lp = new TLine();
+  lp->SetLineColor(kOrange + 8);
+  lp->SetLineWidth(3);
+  lp->SetLineStyle(11);
+  auto* lw = new TBox();
+  lw->SetFillColorAlpha(kOrange + 7, 0.25);
+  auto* leg = new TLegend(0.03, 0.08, 0.99, 0.92);
   leg->SetBorderSize(0);
   leg->SetFillStyle(0);
-  leg->SetMargin(0.06);
-  leg->SetTextSize(0.0255);
-  leg->SetHeader(Form("L%d, p_{T} = %.2f GeV,  match window %.1f mm", layer + 1, pt, win));
-  leg->AddEntry(trk, "true track; markers are its stub on each ladder", "l");
-  leg->AddEntry(gP, "where the algorithm looks", "l");
-  leg->AddEntry(gWin, "match window around it", "f");
+  leg->SetNColumns(3);
+  leg->SetMargin(0.12);
+  leg->SetTextSize(0.26);
+  leg->AddEntry(lt, "the track, with its stub", "l");
+  leg->AddEntry(lp, "where the algorithm looks", "l");
+  leg->AddEntry(lw, Form("#pm%.1f mm match window", kWindow[layer]), "f");
   leg->Draw();
+
+  c->cd();
+  TLatex hd;
+  hd.SetNDC();
+  hd.SetTextSize(0.030);
+  hd.SetTextAlign(32);
+  hd.DrawLatex(0.965, 0.965, Form("L%d, p_{T} = %.2f GeV,  layer geometry measured from the ntuple", layer + 1, pt));
 
   Save(c, out);
 }
