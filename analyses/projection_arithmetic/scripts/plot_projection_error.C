@@ -763,13 +763,37 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
     g->SetLineColor(kRed + 1);
     g->SetLineWidth(3);
     g->Draw("L same");
-    // the direction at the beam line -- the slope the algorithm keeps using
-    auto* tg = new TLine(0, 0, 36. * std::cos(phi0 + rot), 36. * std::sin(phi0 + rot));
-    tg->SetLineColor(kOrange + 8);
-    tg->SetLineWidth(3);
-    tg->SetLineStyle(11);
-    tg->Draw();
   }
+  {  // theta is a LOCAL angle at the crossing: between the track there and the
+    // radial direction. The algorithm's slope is the one a track with theta = 0
+    // would have, i.e. it assumes the track has not yet turned.
+    const double phC = phi0A - std::asin(x0) + rot;
+    const double px = rm * std::cos(phC), py = rm * std::sin(phC);
+    auto* ray = new TLine(0, 0, 86. * std::cos(phC), 86. * std::sin(phC));
+    ray->SetLineColor(kOrange + 8);
+    ray->SetLineWidth(2);
+    ray->SetLineStyle(11);
+    ray->Draw();
+
+    // the track's own direction where it crosses
+    const double dpsi = -(0.5 * rinv) / std::sqrt(1 - x0 * x0);
+    const double tx = std::cos(phC) - rm * std::sin(phC) * dpsi;
+    const double ty = std::sin(phC) + rm * std::cos(phC) * dpsi;
+    const double aTrk = std::atan2(ty, tx);
+    auto* arc = new TArc(px, py, 13., aTrk * TMath::RadToDeg(), phC * TMath::RadToDeg());
+    arc->SetFillStyle(0);
+    arc->SetLineColor(kOrange + 9);
+    arc->SetLineWidth(2);
+    arc->Draw("only");
+    TLatex ta;
+    ta.SetTextSize(0.040);
+    ta.SetTextColor(kOrange + 9);
+    ta.SetTextAlign(22);
+    const double am = 0.5 * (aTrk + phC);
+    ta.DrawLatex(px + 17. * std::cos(am), py + 17. * std::sin(am),
+                 Form("#theta = %.0f#circ", std::asin(x0) * TMath::RadToDeg()));
+  }
+
   auto* ip = new TMarker(0, 0, 20);
   ip->SetMarkerSize(1.5);
   ip->SetMarkerColor(kBlack);
@@ -796,12 +820,12 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
   ov.DrawLatex(2.5, -3.5, "beam line");
   ov.SetTextColor(kAzure + 2);
   ov.SetTextAlign(32);
-  ov.DrawLatex(60., 36., "shown at right");
+  ov.DrawLatex(40., 65., "shown at right");
   ov.SetTextColor(kOrange + 9);
   ov.SetTextAlign(12);
-  ov.DrawLatex(21., 31., "direction at the beam line");
-  ov.DrawLatex(21., 26., "= the slope the algorithm");
-  ov.DrawLatex(21., 21., "uses out at the layer");
+  ov.DrawLatex(5., 36., "radial direction at the crossing;");
+  ov.DrawLatex(5., 31., "the algorithm's slope is the one");
+  ov.DrawLatex(5., 26., "a track with #theta = 0 would have");
 
   Save(c, out);
 }
