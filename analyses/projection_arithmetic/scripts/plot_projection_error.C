@@ -763,6 +763,19 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
     g->SetLineColor(kRed + 1);
     g->SetLineWidth(3);
     g->Draw("L same");
+
+    // the predicted line itself, over the radii where it is actually used:
+    // anchored at rmean, slope -rinv/2. At this scale it lies on the track --
+    // which is why the patch has to be blown up at right.
+    auto* gp = new TGraph();
+    for (double r = rm - kDrMax; r <= rm + kDrMax + 1e-9; r += 1.25) {
+      double ph = phi0 - asin3(x0) - (r - rm) * 0.5 * rinv + rot;
+      gp->SetPoint(gp->GetN(), r * std::cos(ph), r * std::sin(ph));
+    }
+    gp->SetLineColor(kOrange + 8);
+    gp->SetLineWidth(4);
+    gp->SetLineStyle(11);
+    gp->Draw("L same");
   }
   {  // theta is a LOCAL angle at the crossing: between the track there and the
     // radial direction. The algorithm's slope is the one a track with theta = 0
@@ -770,9 +783,9 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
     const double phC = phi0A - std::asin(x0) + rot;
     const double px = rm * std::cos(phC), py = rm * std::sin(phC);
     auto* ray = new TLine(0, 0, 86. * std::cos(phC), 86. * std::sin(phC));
-    ray->SetLineColor(kOrange + 8);
+    ray->SetLineColor(kGray + 2);
     ray->SetLineWidth(2);
-    ray->SetLineStyle(11);
+    ray->SetLineStyle(2);
     ray->Draw();
 
     // the track's own direction where it crosses
@@ -821,11 +834,11 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
   ov.SetTextColor(kAzure + 2);
   ov.SetTextAlign(32);
   ov.DrawLatex(40., 65., "shown at right");
-  ov.SetTextColor(kOrange + 9);
+  ov.SetTextColor(kGray + 3);
   ov.SetTextAlign(12);
-  ov.DrawLatex(5., 36., "radial direction at the crossing;");
-  ov.DrawLatex(5., 31., "the algorithm's slope is the one");
-  ov.DrawLatex(5., 26., "a track with #theta = 0 would have");
+  ov.DrawLatex(2., 81., "dotted: the radial direction at the");
+  ov.DrawLatex(2., 76., "crossing. #minusr_{inv}/2 is the slope of a");
+  ov.DrawLatex(2., 71., "track that crosses radially, #theta = 0");
 
   Save(c, out);
 }
