@@ -554,9 +554,9 @@ void FigSlope(const char* out, int layer = 3) {
 // drawn to scale in the plane.
 // ---------------------------------------------------------------------------
 void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
-  auto* c = new TCanvas("ctr", "", 1560, 610);
-  auto* pOv = new TPad("pOv", "", 0.000, 0.0, 0.435, 1.0);
-  auto* pZm = new TPad("pZm", "", 0.435, 0.0, 1.000, 1.0);
+  auto* c = new TCanvas("ctr", "", 1560, 680);
+  auto* pOv = new TPad("pOv", "", 0.000, 0.0, 0.405, 1.0);
+  auto* pZm = new TPad("pZm", "", 0.405, 0.0, 1.000, 1.0);
   pOv->Draw();
   pZm->Draw();
   pZm->cd();
@@ -689,22 +689,19 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
     anch->SetMarkerSize(1.6);
     anch->Draw();
 
-    an.SetTextColor(kRed + 1);
-    an.SetTextAlign(32);
-    an.DrawLatex(Y(rLo + 0.3, PhiT(rLo + 0.3)) - 0.25, rLo + 0.38, k == 0 ? "track A" : "track B");
   }
 
   // both tracks come from the beam line, far below this patch
   an.SetTextColor(kGray + 3);
   an.SetTextAlign(12);
   an.SetTextAlign(12);
-  an.DrawLatex(vLo + 0.25, rm + 0.28, "r_{mean}");
+  an.DrawLatex(vLo + 0.5, rm + 0.22, "r_{mean}");
   an.SetTextAlign(12);
-  an.DrawLatex(vLo + 0.25, 0.5 * (kSensor[0] + kSensor[1]) + 1.05, "inner ladder");
+  an.DrawLatex(vLo + 0.5, 0.5 * (kSensor[0] + kSensor[1]) + 1.10, "inner ladder");
   an.SetTextAlign(32);
-  an.DrawLatex(vHi - 0.25, 0.5 * (kSensor[2] + kSensor[3]) + 0.95, "outer ladder");
+  an.DrawLatex(vHi - 0.4, 0.5 * (kSensor[2] + kSensor[3]) + 0.80, "outer ladder");
 
-  auto* leg = new TLegend(0.085, 0.925, 0.80, 0.985);
+  auto* leg = new TLegend(0.085, 0.925, 0.74, 0.985);
   leg->SetBorderSize(0);
   leg->SetFillStyle(0);
   leg->SetNColumns(3);
@@ -721,7 +718,7 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
   lw->SetLineColor(kOrange + 7);
   lw->SetLineWidth(9);
   leg->AddEntry(lt, "true helix + stub", "l");
-  leg->AddEntry(lp, "assumed trajectory  (#Box at r_{mean}, #Delta at the stub)", "l");
+  leg->AddEntry(lp, "assumed trajectory", "l");
   leg->AddEntry(lw, Form("#pm%.1f mm window", kWindow[layer]), "l");
   leg->Draw();
   TLatex hd;
@@ -902,13 +899,10 @@ void FigTransverse(const char* out, double pt = 0.60, int layer = 3) {
   ov.SetTextAlign(12);
   ov.SetTextColor(kBlack);
   ov.DrawLatex(2.5, -3.5, "beam line");
-  ov.SetTextColor(kAzure + 2);
-  ov.SetTextAlign(32);
-  ov.DrawLatex(44., 66., "shown at right");
   ov.SetTextColor(kRed + 1);
   ov.SetTextAlign(12);
   ov.SetTextSize(0.037);
-  ov.DrawLatex(3., 80., "#odot  seed stubs: they fix r_{inv} and #phi_{0}");
+  ov.DrawLatex(3., 80., "#odot  seed stubs");
 
   Save(c, out);
 }
