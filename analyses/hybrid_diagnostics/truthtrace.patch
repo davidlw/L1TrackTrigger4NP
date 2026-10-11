@@ -1,0 +1,231 @@
+--- a/L1Trigger/TrackFindingTracklet/src/TrackletCalculatorBase.cc
++++ b/L1Trigger/TrackFindingTracklet/src/TrackletCalculatorBase.cc
+@@ -1,3 +1,4 @@
++#include <cstdlib>
+ #include "L1Trigger/TrackFindingTracklet/interface/TrackletCalculatorBase.h"
+ #include "L1Trigger/TrackFindingTracklet/interface/Tracklet.h"
+ #include "L1Trigger/TrackFindingTracklet/interface/Stub.h"
+@@ -11,6 +12,30 @@
+ #include "FWCore/Utilities/interface/Exception.h"
+ #include "DataFormats/Math/interface/deltaPhi.h"
+ #include "L1Trigger/L1TCommon/interface/BitShift.h"
++#include <algorithm>
++
++// ---- TRUTHTRACE (diagnostic, not for production) ----
++namespace {
++  inline bool ttHas(const std::vector<int>& v, int x) { return std::find(v.begin(), v.end(), x) != v.end(); }
++  // TP of a genuine stub (both clusters from it): +tp and -tp present
++  // Dummy stubs carry the TP label of their inner cluster only (+tp); the stub position is
++  // that cluster's, so the inner-cluster TP is the stub's truth here.
++  inline int ttStubTP(const trklet::L1TStub* s) {
++    for (int tp : s->tps())
++      if (tp > 0)
++        return tp;
++    return 0;
++  }
++  // TP shared genuinely by two stubs (as Tracklet::tpseed)
++  inline int ttPairTP(const trklet::L1TStub* a, const trklet::L1TStub* b) {
++    const auto vb = b->tps();
++    for (int tp : a->tps())
++      if (tp > 0 && ttHas(vb, tp))
++        return tp;
++    return 0;
++  }
++}  // namespace
++// ---- end TRUTHTRACE ----
+ 
+ using namespace std;
+ using namespace trklet;
+@@ -391,6 +416,11 @@
+                 phiderdisk,
+                 rderdisk);
+ 
++  const int ttp = ttPairTP(innerStub, outerStub);  // TRUTHTRACE
++  if (ttp)
++    globals_->ofstream("truthtrace.txt") << "C " << ttp << " " << iSeed_ << " " << iSector_ << " " << phimin_ << " "
++                                         << rinv << " " << phi0 << " " << z0 << " " << t << std::endl;
++
+   if (settings_.useapprox()) {
+     phi1 = innerFPGAStub->phiapprox(phimin_, phimax_);
+     z1 = innerFPGAStub->zapprox();
+@@ -579,6 +609,10 @@
+     if (settings_.debugTracklet()) {
+       edm::LogVerbatim("Tracklet") << getName() << " Failed rinv or z0 cut";
+     }
++    if (ttp)  // TRUTHTRACE
++      globals_->ofstream("truthtrace.txt") << "F " << ttp << " " << iSeed_ << " " << iSector_ << " rz "
++                                           << ITC->rinv_final.local_passes() << " " << ITC->z0_final.local_passes()
++                                           << " " << irinv * ITC->rinv_final.K() << " " << iz0 * ITC->z0_final.K() << std::endl;
+     return false;
+   }
+ 
+@@ -586,6 +620,9 @@
+     if (settings_.debugTracklet()) {
+       edm::LogVerbatim("Tracklet") << getName() << " Failed in sector check";
+     }
++    if (ttp)  // TRUTHTRACE
++      globals_->ofstream("truthtrace.txt") << "F " << ttp << " " << iSeed_ << " " << iSector_ << " sec "
++                                           << phi0approx << " " << rinvapprox << std::endl;
+     return false;
+   }
+ 
+@@ -594,6 +631,30 @@
+     //if (!settings_.reachesRadius(settings_.rmean(settings_.projlayers(iSeed_, i) - 1), rinvgate))
+     //  continue;
+ 
++    if (ttp) {  // TRUTHTRACE: status 1 = z out of range, 2 = phi out of range
++      const double kphiL[4] = {ITC->phiL_0_final.K(), ITC->phiL_1_final.K(), ITC->phiL_2_final.K(), ITC->phiL_3_final.K()};
++      const double kzL[4] = {ITC->zL_0_final.K(), ITC->zL_1_final.K(), ITC->zL_2_final.K(), ITC->zL_3_final.K()};
++      int st = 0;
++      if (izproj[i] < -(1 << (settings_.nzbitsstub(0) - 1)) || izproj[i] >= (1 << (settings_.nzbitsstub(0) - 1)))
++        st = 1;
++      else if (iphiproj[i] >= (1 << settings_.nphibitsstub(5)) - 1 || iphiproj[i] <= 0)
++        st = 2;
++      globals_->ofstream("truthtrace.txt") << "P " << ttp << " " << iSeed_ << " " << iSector_ << " "
++                                           << settings_.projlayers(iSeed_, i) << " " << st << " " << phiproj[i] << " "
++                                           << phiprojapprox[i] << " " << iphiproj[i] * kphiL[i] << " " << zproj[i]
++                                           << " " << zprojapprox[i] << " " << izproj[i] * kzL[i] << " "
++                                           << irinv * ITC->rinv_final.K() << std::endl;
++    }
++    {  // DIAG: TT_REACHGATE = margin m: skip the projection if 0.5 r |rinv| >= m (0 = off; Settings.h uses 0.9)
++      static const double ttReach = std::getenv("TT_REACHGATE") ? std::atof(std::getenv("TT_REACHGATE")) : 0.0;
++      const double rl = settings_.rmean(settings_.projlayers(iSeed_, i) - 1);
++      if (ttReach > 0 && 0.5 * rl * std::abs(rinvgate) >= ttReach) {
++        if (ttp)
++          globals_->ofstream("truthtrace.txt") << "R " << ttp << " " << iSeed_ << " " << iSector_ << " "
++                                               << settings_.projlayers(iSeed_, i) << std::endl;
++        continue;
++      }
++    }
+     //reject projection if z is out of range
+     if (izproj[i] < -(1 << (settings_.nzbitsstub(0) - 1)))
+       continue;
+@@ -746,6 +807,9 @@
+     bool added = false;
+     if (tracklet->validProj(lproj - 1)) {
+       added = addLayerProj(tracklet, lproj);
++      if (ttp)  // TRUTHTRACE
++        globals_->ofstream("truthtrace.txt") << "A " << ttp << " " << iSeed_ << " " << iSector_ << " " << lproj << " "
++                                             << added << std::endl;
+       if (added && lproj == 3)
+         addL3 = true;
+       if (added && lproj == 4)
+--- a/L1Trigger/TrackFindingTracklet/src/MatchProcessor.cc
++++ b/L1Trigger/TrackFindingTracklet/src/MatchProcessor.cc
+@@ -1,3 +1,4 @@
++#include <cstdlib>
+ //////////////////////////////////////////////////////////////////
+ // MatchProcessor
+ //
+@@ -21,7 +22,39 @@
+ #include "L1Trigger/TrackFindingTracklet/interface/IMATH_TrackletCalculator.h"
+ 
+ #include <filesystem>
++#include <algorithm>
++
++// ---- TRUTHTRACE (diagnostic, not for production) ----
++namespace {
++  inline bool ttHas(const std::vector<int>& v, int x) { return std::find(v.begin(), v.end(), x) != v.end(); }
++  // TP of a genuine stub (both clusters from it): +tp and -tp present
++  // Dummy stubs carry the TP label of their inner cluster only (+tp); the stub position is
++  // that cluster's, so the inner-cluster TP is the stub's truth here.
++  inline int ttStubTP(const trklet::L1TStub* s) {
++    for (int tp : s->tps())
++      if (tp > 0)
++        return tp;
++    return 0;
++  }
++  // TP shared genuinely by two stubs (as Tracklet::tpseed)
++  inline int ttPairTP(const trklet::L1TStub* a, const trklet::L1TStub* b) {
++    const auto vb = b->tps();
++    for (int tp : a->tps())
++      if (tp > 0 && ttHas(vb, tp))
++        return tp;
++    return 0;
++  }
++}  // namespace
++// ---- end TRUTHTRACE ----
+ 
++namespace {
++  // DIAG: TT_PHIWIN_SCALE multiplies the barrel r-phi match window (default 1)
++  inline double ttPhiWinScale() {
++    static const double s = std::getenv("TT_PHIWIN_SCALE") ? std::atof(std::getenv("TT_PHIWIN_SCALE")) : 1.0;
++    return s;
++  }
++}  // namespace
++
+ using namespace std;
+ using namespace trklet;
+ 
+@@ -548,7 +581,7 @@
+       best_ideltar_disk = (1 << (fpgastub->r().nbits() - 1));  // Set to the maximum possible
+     // If so, replace the "best" values with the cut tables
+     if (newtracklet) {
+-      best_ideltaphi_barrel = (int)phimatchcuttable_.lookup(seedindex);
++      best_ideltaphi_barrel = (int)(phimatchcuttable_.lookup(seedindex) * ttPhiWinScale());
+       best_ideltaz_barrel = (int)zmatchcuttable_.lookup(seedindex);
+     }
+ 
+@@ -583,6 +616,19 @@
+     bool imatch = (std::abs(ideltaphi) <= best_ideltaphi_barrel && (ideltaz << dzshift_ < best_ideltaz_barrel) &&
+                    (ideltaz << dzshift_ >= -best_ideltaz_barrel));
+ 
++    {  // TRUTHTRACE: every barrel match candidate of a truth-seeded tracklet
++      const int ttp = ttPairTP(tracklet->innerFPGAStub()->l1tstub(), tracklet->outerFPGAStub()->l1tstub());
++      if (ttp) {
++        const double rm = settings_.rmean(layerdisk_);
++        globals_->ofstream("truthtrace.txt")
++            << "M " << ttp << " " << seedindex << " " << phimin_ << " " << layerdisk_ + 1 << " "
++            << ttStubTP(stub) << " " << ideltaphi * settings_.kphi1() * rm << " "
++            << phimatchcuttable_.lookup(seedindex) * ttPhiWinScale() * settings_.kphi1() * rm << " " << (ideltaz << dzshift_) * settings_.kz()
++            << " " << zmatchcuttable_.lookup(seedindex) * settings_.kz() << " " << imatch << " " << dphi * rm << " "
++            << dphiapprox * rm << " " << dz << std::endl;
++      }
++    }
++
+     if (settings_.debugTracklet()) {
+       edm::LogVerbatim("Tracklet") << getName() << " imatch = " << imatch << " ideltaphi cut " << ideltaphi << " "
+                                    << phimatchcuttable_.lookup(seedindex) << " ideltaz<<dzshift cut "
+--- a/L1Trigger/TrackFindingTracklet/src/MatchEngineUnit.cc
++++ b/L1Trigger/TrackFindingTracklet/src/MatchEngineUnit.cc
+@@ -1,3 +1,4 @@
++#include <cstdlib>
+ #include "L1Trigger/TrackFindingTracklet/interface/MatchEngineUnit.h"
+ #include "L1Trigger/TrackFindingTracklet/interface/TrackletLUT.h"
+ #include "L1Trigger/TrackFindingTracklet/interface/Settings.h"
+@@ -139,7 +140,8 @@
+ 
+     int deltaphi = stubfinephi - projfinephi____;
+ 
+-    constexpr int idphicut = 3;
++    // DIAG: TT_IDPHICUT overrides the fine-phi candidate cut (default 3)
++    static const int idphicut = std::getenv("TT_IDPHICUT") ? std::atoi(std::getenv("TT_IDPHICUT")) : 3;
+ 
+     bool dphicut = (abs(deltaphi) < idphicut);
+ 
+--- a/L1Trigger/TrackFindingTracklet/plugins/L1FPGATrackProducer.cc
++++ b/L1Trigger/TrackFindingTracklet/plugins/L1FPGATrackProducer.cc
+@@ -455,7 +455,7 @@
+         float vy = iterTP.vertex().y();
+         float vz = iterTP.vertex().z();
+ 
+-        if (sim_pt < 1.0 || std::abs(vz) > 100.0 || hypot(vx, vy) > 50.0)
++        if (sim_pt < 0.2 || std::abs(vz) > 100.0 || hypot(vx, vy) > 50.0)  // TRUTHTRACE: was 1.0
+           continue;
+ 
+         ev.addL1SimTrack(sim_eventid, ntps, sim_type, sim_pt, sim_eta, sim_phi, vx, vy, vz);
+--- a/L1Trigger/TrackFindingTracklet/test/L1TrackHitNtupleMaker.cc
++++ b/L1Trigger/TrackFindingTracklet/test/L1TrackHitNtupleMaker.cc
+@@ -271,9 +271,9 @@
+   std::vector<float>* m_allstub_trigBend;
+ 
+   // CLUSTER BRANCHES (Wei Li / Rice)
+-  //std::vector<float> *cluster_x, *cluster_y, *cluster_z; // Added cluster_z
+-  //std::vector<int> *cluster_layer, *cluster_isBarrel, *cluster_halfModule, *cluster_isPS, *cluster_chipId, *cluster_sensor;
+-  //std::vector<uint32_t> *cluster_detid;
++  std::vector<float> *cluster_x, *cluster_y, *cluster_z; // Added cluster_z
++  std::vector<int> *cluster_layer, *cluster_isBarrel, *cluster_halfModule, *cluster_isPS, *cluster_chipId, *cluster_sensor;
++  std::vector<uint32_t> *cluster_detid;
+ 
+   // INCLUSIVE TTCLUSTER BRANCHES
+   std::vector<float>* m_ttclus_x;

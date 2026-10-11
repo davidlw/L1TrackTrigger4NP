@@ -1,0 +1,112 @@
+diff --git a/L1Trigger/TrackFindingTracklet/interface/Settings.h b/L1Trigger/TrackFindingTracklet/interface/Settings.h
+index 22bd087ab50..e4d61f91149 100644
+--- a/L1Trigger/TrackFindingTracklet/interface/Settings.h
++++ b/L1Trigger/TrackFindingTracklet/interface/Settings.h
+@@ -257,6 +257,9 @@ namespace trklet {
+ 
+     bool extended() const { return extended_; }
+     void setExtended(bool extended) { extended_ = extended; }
++    // if false, ignore stub bend in seed-pair and match selection (dummy/position-only stubs)
++    bool useBend() const { return useBend_; }
++    void setUseBend(bool useBend) { useBend_ = useBend; }
+     bool duplicateMPs() const { return duplicateMPs_; }
+     const std::array<bool, N_LAYER + N_DISK>& layersDisksDuplicatedEqualProjBalance() const {
+       return layersDisksDuplicatedEqualProjBalance_;
+@@ -902,7 +905,7 @@ namespace trklet {
+                                                             {"ChiSq", false},
+                                                             {"Seeds", false},
+                                                             {"FT", false},
+-                                                            {"Residuals", false},
++                                                            {"Residuals", true},
+                                                             {"StubBend", false},
+                                                             {"MC", false},
+                                                             {"MP", false},
+@@ -1024,6 +1027,7 @@ namespace trklet {
+     // NEXT 3 VALUES OVERRIDDEN BY PYTHON CFG
+     unsigned int nHelixPar_{4};  // 4 or 5 param helix fit
+     bool extended_{false};       // turn on displaced tracking
++    bool useBend_{true};         // false = ignore stub bend (dummy/position-only stubs)
+     bool reduced_{false};        // use reduced (Summer Chain) config
+     bool inventStubs_{false};    // invent seeding stub coordinates based on tracklet traj
+ 
+diff --git a/L1Trigger/TrackFindingTracklet/plugins/L1FPGATrackProducer.cc b/L1Trigger/TrackFindingTracklet/plugins/L1FPGATrackProducer.cc
+index 7bf81334188..c0d19653593 100644
+--- a/L1Trigger/TrackFindingTracklet/plugins/L1FPGATrackProducer.cc
++++ b/L1Trigger/TrackFindingTracklet/plugins/L1FPGATrackProducer.cc
+@@ -275,6 +275,7 @@ L1FPGATrackProducer::L1FPGATrackProducer(edm::ParameterSet const& iConfig)
+ 
+   settings_.setExtended(extended_);
+   settings_.setReduced(reduced_);
++  settings_.setUseBend(iConfig.getParameter<bool>("UseBend"));
+   settings_.setNHelixPar(nHelixPar_);
+ 
+ #ifndef USEHYBRID
+diff --git a/L1Trigger/TrackFindingTracklet/python/l1tTTTracksFromTrackletEmulation_cfi.py b/L1Trigger/TrackFindingTracklet/python/l1tTTTracksFromTrackletEmulation_cfi.py
+index 4066a576a52..e01d1d1dae2 100644
+--- a/L1Trigger/TrackFindingTracklet/python/l1tTTTracksFromTrackletEmulation_cfi.py
++++ b/L1Trigger/TrackFindingTracklet/python/l1tTTTracksFromTrackletEmulation_cfi.py
+@@ -18,6 +18,7 @@ l1tTTTracksFromTrackletEmulation = cms.EDProducer("L1FPGATrackProducer",
+                                                FailScenario = cms.untracked.int32(0),
+                                                Extended = cms.bool(False),
+                                                Reduced = cms.bool(False),
++                                               UseBend = cms.bool(True), # False = ignore stub bend (dummy/position-only stubs)
+                                                Hnpar = cms.uint32(4),
+                                                # These 3 files only used for extended or reduced mode.
+                                                memoryModulesFile = cms.FileInPath('L1Trigger/TrackFindingTracklet/data/memorymodules_hourglassExtendedAllCombined.dat'),
+diff --git a/L1Trigger/TrackFindingTracklet/src/MatchEngine.cc b/L1Trigger/TrackFindingTracklet/src/MatchEngine.cc
+index 61e17acac9a..8172cbbbe26 100644
+--- a/L1Trigger/TrackFindingTracklet/src/MatchEngine.cc
++++ b/L1Trigger/TrackFindingTracklet/src/MatchEngine.cc
+@@ -281,7 +281,7 @@ void MatchEngine::execute(unsigned int iSector) {
+ 
+       //Check if stub bend and proj rinv consistent
+       if (passz && passphi) {
+-        if (luttable_.lookup(index)) {
++        if (!settings_.useBend() || luttable_.lookup(index)) {
+           Tracklet* proj = vmprojs_->getTracklet(projindex);
+           std::pair<Tracklet*, int> tmp(proj, vmprojs_->getAllProjIndex(projindex));
+           if (settings_.writeMonitorData("Seeds")) {
+diff --git a/L1Trigger/TrackFindingTracklet/src/MatchEngineUnit.cc b/L1Trigger/TrackFindingTracklet/src/MatchEngineUnit.cc
+index f04c76fbc92..ae71301b5a2 100644
+--- a/L1Trigger/TrackFindingTracklet/src/MatchEngineUnit.cc
++++ b/L1Trigger/TrackFindingTracklet/src/MatchEngineUnit.cc
+@@ -172,7 +172,8 @@ void MatchEngineUnit::processPipeline() {
+       }
+     }
+ 
+-    bool goodpair = (pass && dphicut) && luttable_.lookup(index);
++    // dummy/position-only stubs: skip the bend-match LUT, keep dphi/dz residual cuts
++    bool goodpair = (pass && dphicut) && (!settings_.useBend() || luttable_.lookup(index));
+ 
+     std::pair<Tracklet*, const Stub*> tmppair(proj____, vmstub____.stub());
+ 
+diff --git a/L1Trigger/TrackFindingTracklet/src/TrackletEngine.cc b/L1Trigger/TrackFindingTracklet/src/TrackletEngine.cc
+index 4510ce20795..586b71feca7 100644
+--- a/L1Trigger/TrackFindingTracklet/src/TrackletEngine.cc
++++ b/L1Trigger/TrackFindingTracklet/src/TrackletEngine.cc
+@@ -123,7 +123,7 @@ void TrackletEngine::execute() {
+         int ptinnerindex = (index << innerbend.nbits()) + innerbend.value();
+         int ptouterindex = (index << outerbend.nbits()) + outerbend.value();
+ 
+-        if (!(innerptlut_.lookup(ptinnerindex) && outerptlut_.lookup(ptouterindex))) {
++        if (settings_.useBend() && !(innerptlut_.lookup(ptinnerindex) && outerptlut_.lookup(ptouterindex))) {
+           if (settings_.debugTracklet()) {
+             edm::LogVerbatim("Tracklet") << "Stub pair rejected because of stub pt cut bends : "
+                                          << settings_.benddecode(
+diff --git a/L1Trigger/TrackFindingTracklet/src/TrackletEngineUnit.cc b/L1Trigger/TrackFindingTracklet/src/TrackletEngineUnit.cc
+index 5877e1f8e5e..92611f8a5fd 100644
+--- a/L1Trigger/TrackFindingTracklet/src/TrackletEngineUnit.cc
++++ b/L1Trigger/TrackFindingTracklet/src/TrackletEngineUnit.cc
+@@ -106,7 +106,11 @@ void TrackletEngineUnit::step(bool, int, int) {
+     int ptinnerindex = (idphi << tedata_.innerbend_.nbits()) + tedata_.innerbend_.value();
+     int ptouterindex = (idphi << outerbend.nbits()) + outerbend.value();
+ 
+-    if (!(inrange && pttableinnernew_->lookup(ptinnerindex) && pttableouternew_->lookup(ptouterindex))) {
++    // dummy/position-only stubs: skip the bend-based pt consistency cut, keep geometric (inrange) cut
++    const bool bendpass =
++        !settings_->useBend() || (pttableinnernew_->lookup(ptinnerindex) && pttableouternew_->lookup(ptouterindex));
++
++    if (!(inrange && bendpass)) {
+       if (settings_->debugTracklet()) {
+         edm::LogVerbatim("Tracklet") << " Stub pair rejected because of stub pt cut bends : "
+                                      << settings_->benddecode(
