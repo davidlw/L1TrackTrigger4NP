@@ -1,0 +1,4 @@
+# count_miniaod.py on the re-slimmed MINIAODSIM files (100 events each)
+hyd_sim.root: packedPF 4087 (max 16356), charged 2649 (max 11675), withTrackDetails 2649, lostTracks 27, gen ch |eta|<2.5 pT>0.3 1750, PF ch |eta|<2.5 pT>0.3 1595
+ppb_sim.root: packedPF 397 (max 690), charged 102 (max 274), withTrackDetails 102, lostTracks 0, gen ch 66, PF ch 58
+upc_sim.root: packedPF 154 (max 179), charged 2 (max 3), withTrackDetails 2, lostTracks 0, gen ch 2, PF ch 2
