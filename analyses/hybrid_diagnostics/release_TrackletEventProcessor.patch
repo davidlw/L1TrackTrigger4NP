@@ -1,0 +1,67 @@
+--- a/L1Trigger/TrackFindingTracklet/src/TrackletEventProcessor.cc
++++ b/L1Trigger/TrackFindingTracklet/src/TrackletEventProcessor.cc
+@@ -13,7 +13,31 @@
+ 
+ #include <iomanip>
+ #include <filesystem>
++#include <algorithm>
+ 
++// ---- TRUTHTRACE (diagnostic, not for production) ----
++namespace {
++  inline bool ttHas(const std::vector<int>& v, int x) { return std::find(v.begin(), v.end(), x) != v.end(); }
++  // TP of a genuine stub (both clusters from it): +tp and -tp present
++  // Dummy stubs carry the TP label of their inner cluster only (+tp); the stub position is
++  // that cluster's, so the inner-cluster TP is the stub's truth here.
++  inline int ttStubTP(const trklet::L1TStub* s) {
++    for (int tp : s->tps())
++      if (tp > 0)
++        return tp;
++    return 0;
++  }
++  // TP shared genuinely by two stubs (as Tracklet::tpseed)
++  inline int ttPairTP(const trklet::L1TStub* a, const trklet::L1TStub* b) {
++    const auto vb = b->tps();
++    for (int tp : a->tps())
++      if (tp > 0 && ttHas(vb, tp))
++        return tp;
++    return 0;
++  }
++}  // namespace
++// ---- end TRUTHTRACE ----
++
+ using namespace trklet;
+ using namespace std;
+ 
+@@ -45,7 +69,7 @@
+   if (settings_->kphider() != globals_->ITC_L1L2()->der_phiL_final.K()) {
+     throw cms::Exception("Inconsistency")
+         << "t conversion parameter inconsistency:" << settings_->kphider() / globals_->ITC_L1L2()->der_phiL_final.K()
+-        << "\n";
++        << std::endl;
+   }
+ 
+   if (settings_->debugTracklet()) {
+@@ -182,6 +206,23 @@
+   eventnum_++;
+   bool first = (eventnum_ == 1);
+ 
++  {  // TRUTHTRACE: event, truth particles, genuine stubs
++    auto& tt = globals_->ofstream("truthtrace.txt");
++    tt << "E " << eventnum_ << " " << ev.nsimtracks() << " " << ev.nstubs() << std::endl;
++    for (unsigned int i = 0; i < ev.nsimtracks(); i++) {
++      const L1SimTrack& st = ev.simtrack(i);
++      tt << "T " << st.trackid() << " " << st.type() << " " << st.pt() << " " << st.eta() << " " << st.phi() << " "
++         << st.vz() << std::endl;
++    }
++    for (int j = 0; j < ev.nstubs(); j++) {
++      const L1TStub& stub = ev.stub(j);
++      const int ttp = ttStubTP(&stub);
++      if (ttp)
++        tt << "S " << ttp << " " << stub.layerdisk() << " " << stub.region() << " " << stub.r() << " " << stub.phi()
++           << " " << stub.z() << std::endl;
++    }
++  }
++
+   for (unsigned int k = 0; k < N_SECTOR; k++) {
+     sector_->setSector(k);
+ 

@@ -163,6 +163,68 @@ budget of 51 GB/s (`scripts/ppb_budget.py`, cumulative):
   about 26 kB of hits. At the μ ≈ 0.06 that is enough for 750 kHz, it adds
   about 5 kB.
 
+## miniAOD event size
+
+Measured, not modelled. The existing step-3 (RECO+PAT) files
+(`Step2_RECO-MINIAOD_CMSSW_14_0_6_v4`) were re-written with exactly the
+standard Phase-2 `MINIAOD` / `MINIAODSIM` event content and output settings:
+`EventContent_cff`, `miniAOD_customizeOutput`, LZMA level 4
+(`miniaod/reslim_miniaod_cfg.py`; nothing is re-reconstructed). Sizes are
+`edmEventSize` compressed bytes per event, summed over collections
+(`miniaod/sizes/`). Per-file metadata, about 1–2 MB per file, is excluded.
+
+| kB per event | PbPb MB (Hydjet, 100 ev.) | UPC (QED μμ, 299 ev.) | pPb (EPOS, 500 ev.) |
+|---|---|---|---|
+| **MINIAOD (data-like)** | **130** | **4.0** | **7.1** |
+| MINIAODSIM (+ MC truth) | 442 | 4.5 | 12.9 |
+| Raw, baseline (for comparison) | 4100 | 2400 | 2470 |
+| Raw / MINIAOD | 32× | 600× | 350× |
+
+**What dominates PbPb MINIAOD:**
+
+| Collection | Share |
+|---|---|
+| `packedPFCandidates` | 46% |
+| PUPPI / CHS / AK8 jets | 36% |
+| secondary vertices | 3% |
+| muons, electrons | ~1% each |
+
+**The standard (pp-flavour) miniAOD keeps nearly all charged particles**
+(`miniaod/count_miniaod.py`, `miniaod/sizes/counts.txt`):
+
+| | Hydjet | pPb |
+|---|---|---|
+| Charged PF candidates per event | 2649 | 102 |
+| Fraction of generated charged particles (\|η\| < 2.5, pT > 0.3 GeV) present as charged PF candidates | 91% | 88% |
+
+Every charged candidate keeps full track details. UPC events contain about
+150 packed candidates, almost all neutral calorimeter-noise clusters, and 2
+charged.
+
+**What this means for throughput.** At the rates above, miniAOD-only output
+would be:
+
+| Stream | Rate | Throughput |
+|---|---|---|
+| PbPb MB | 50 kHz | 6.5 GB/s |
+| UPC | 100 kHz | 0.4 GB/s |
+| pPb | 750 kHz | 5.3 GB/s |
+
+All are well inside the 51 GB/s heavy-ion storage budget. Recording
+reconstructed events and dropping raw, the TDR's other suggested strategy
+(§1.2.3), would therefore fit for all minimum-bias events. It needs
+offline-quality reconstruction at the HLT, and the events cannot be
+re-reconstructed afterwards.
+
+**Caveats:**
+- **This is the Phase-2 pp miniAOD.** Run-3 heavy-ion miniAOD (`pp_on_AA`)
+  adds centrality, event plane, HF information and constituent-subtracted
+  jets, and drops some pp jet collections. Those changes are a few kB to tens
+  of kB, so the PbPb number could shift by about ±20%. That is my estimate,
+  not measured.
+- **The reconstruction is the standard Phase-2 pp reconstruction run on
+  heavy-ion events,** not a dedicated heavy-ion configuration.
+
 ## Expected collision rates in Run 4 and Run 5
 
 The source is R. Bruce, *Projected heavy-ion performance in Run 4 and Run 5*

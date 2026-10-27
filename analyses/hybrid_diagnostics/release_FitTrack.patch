@@ -1,0 +1,61 @@
+--- a/L1Trigger/TrackFindingTracklet/src/FitTrack.cc
++++ b/L1Trigger/TrackFindingTracklet/src/FitTrack.cc
+@@ -9,7 +9,31 @@
+ 
+ #include "FWCore/MessageLogger/interface/MessageLogger.h"
+ #include "FWCore/Utilities/interface/Exception.h"
++#include <algorithm>
+ 
++// ---- TRUTHTRACE (diagnostic, not for production) ----
++namespace {
++  inline bool ttHas(const std::vector<int>& v, int x) { return std::find(v.begin(), v.end(), x) != v.end(); }
++  // TP of a genuine stub (both clusters from it): +tp and -tp present
++  // Dummy stubs carry the TP label of their inner cluster only (+tp); the stub position is
++  // that cluster's, so the inner-cluster TP is the stub's truth here.
++  inline int ttStubTP(const trklet::L1TStub* s) {
++    for (int tp : s->tps())
++      if (tp > 0)
++        return tp;
++    return 0;
++  }
++  // TP shared genuinely by two stubs (as Tracklet::tpseed)
++  inline int ttPairTP(const trklet::L1TStub* a, const trklet::L1TStub* b) {
++    const auto vb = b->tps();
++    for (int tp : a->tps())
++      if (tp > 0 && ttHas(vb, tp))
++        return tp;
++    return 0;
++  }
++}  // namespace
++// ---- end TRUTHTRACE ----
++
+ using namespace std;
+ using namespace trklet;
+ 
+@@ -690,7 +714,7 @@
+                                  << "drinv/cov = " << drinv << "/" << drinv_cov << " \n"
+                                  << "dphi0/cov = " << drinv << "/" << dphi0_cov << " \n"
+                                  << "dt/cov = " << drinv << "/" << dt_cov << " \n"
+-                                 << "dz0/cov = " << drinv << "/" << dz0_cov << "\n";
++                                 << "dz0/cov = " << drinv << "/" << dz0_cov << std::endl;
+     std::string myout = "D[0][k]= ";
+     for (unsigned int i = 0; i < 2 * n; i++) {
+       myout += std::to_string(D[0][i]);
+@@ -998,6 +1022,17 @@
+                                    << " " << asinh(bestTracklet->t());
+     }
+ 
++    {  // TRUTHTRACE: track builder input
++      const int ttp = ttPairTP(bestTracklet->innerFPGAStub()->l1tstub(), bestTracklet->outerFPGAStub()->l1tstub());
++      if (ttp) {
++        unsigned int mask = 0;
++        for (unsigned int il = 0; il < N_LAYER + N_DISK; il++)
++          if (bestTracklet->match(il))
++            mask |= (1u << il);
++        globals_->ofstream("truthtrace.txt") << "B " << ttp << " " << bestTracklet->getISeed() << " " << iSector_ << " "
++                                             << nMatches << " " << nMatchesUniq << " " << mask << std::endl;
++      }
++    }
+     std::vector<const Stub*> trackstublist;
+     std::vector<std::pair<int, int>> stubidslist;
+     // Track Builder cut of >= 4 layers with stubs.

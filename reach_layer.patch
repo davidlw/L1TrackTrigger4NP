@@ -1,0 +1,191 @@
+diff -ruN a/L1Trigger/TrackFindingTracklet/interface/Settings.h b/L1Trigger/TrackFindingTracklet/interface/Settings.h
+--- a/L1Trigger/TrackFindingTracklet/interface/Settings.h	2026-09-14 12:43:37
++++ b/L1Trigger/TrackFindingTracklet/interface/Settings.h	2026-09-14 12:43:38
+@@ -26,6 +26,14 @@
+   constexpr int N_DISK = 5;                  // # of endcap disks assumed
+   constexpr unsigned int N_PSLAYER = 3;      // # of barrel PS layers assumed
+   constexpr unsigned int N_SEED = 12;        // # of tracklet+triplet seeds
++
++  // A track of curvature rinv never reaches radius r if its helix diameter
++  // 2/|rinv| is smaller than r: L6 needs pT > 0.62 GeV, L5 0.49, L4 0.39, L3 0.30.
++  // Beyond that point every asin(0.5*r*rinv) in this package is NaN and the
++  // fixed-point projections are finite garbage. Check this before projecting to,
++  // or matching a stub in, any layer. The margin below 1 keeps the
++  // 1/sqrt(1-x^2) derivatives finite as well.
++  inline bool reachesRadius(double r, double rinv) { return 0.5 * r * std::abs(rinv) < 0.999; }
+   constexpr unsigned int N_SEED_PROMPT = 8;  // # of tracklet (prompt) seeds
+ 
+   constexpr unsigned int N_DSS_MOD = 5;  // # of rings with 2S modules per disk
+diff -ruN a/L1Trigger/TrackFindingTracklet/src/FitTrack.cc b/L1Trigger/TrackFindingTracklet/src/FitTrack.cc
+--- a/L1Trigger/TrackFindingTracklet/src/FitTrack.cc	2026-09-14 12:43:37
++++ b/L1Trigger/TrackFindingTracklet/src/FitTrack.cc	2026-09-14 12:43:38
+@@ -753,8 +753,12 @@
+   if (ichisqfit >= (1 << 8))
+     ichisqfit = (1 << 8) - 1;
+ 
+-  double phicrit = phi0fit - asin(0.5 * settings_.rcrit() * rinvfit);
+-  bool keep = (phicrit > settings_.phicritmin()) && (phicrit < settings_.phicritmax());
++  // Same policy point as TrackletCalculatorBase::inSector -- keep the two in step.
++  bool keep = false;
++  if (reachesRadius(settings_.rcrit(), rinvfit)) {
++    double phicrit = phi0fit - asin(0.5 * settings_.rcrit() * rinvfit);
++    keep = (phicrit > settings_.phicritmin()) && (phicrit < settings_.phicritmax());
++  }
+ 
+   if (!keep) {
+     return;
+diff -ruN a/L1Trigger/TrackFindingTracklet/src/PurgeDuplicate.cc b/L1Trigger/TrackFindingTracklet/src/PurgeDuplicate.cc
+--- a/L1Trigger/TrackFindingTracklet/src/PurgeDuplicate.cc	2026-09-14 12:43:37
++++ b/L1Trigger/TrackFindingTracklet/src/PurgeDuplicate.cc	2026-09-14 12:43:38
+@@ -638,10 +638,14 @@
+ 
+   if (st->isBarrel()) {
+     stub_r = settings_.rmean(stubLayer - 1);
+-    stub_phi = tracklet->phi0() - std::asin(stub_r * tracklet_rinv / 2);
+-    stub_phi = stub_phi + iSector * settings_.dphisector() - 0.5 * settings_.dphisectorHG();
+-    stub_phi = reco::reducePhiRange(stub_phi);
+-    stub_z = tracklet->z0() + 2 * tracklet->t() * 1 / tracklet_rinv * std::asin(stub_r * tracklet_rinv / 2);
++    // A tracklet that never reaches this layer cannot have a hit here: leave the
++    // -99 sentinels rather than take asin of an argument beyond 1.
++    if (reachesRadius(stub_r, tracklet_rinv)) {
++      stub_phi = tracklet->phi0() - std::asin(stub_r * tracklet_rinv / 2);
++      stub_phi = stub_phi + iSector * settings_.dphisector() - 0.5 * settings_.dphisectorHG();
++      stub_phi = reco::reducePhiRange(stub_phi);
++      stub_z = tracklet->z0() + 2 * tracklet->t() * 1 / tracklet_rinv * std::asin(stub_r * tracklet_rinv / 2);
++    }
+   } else {
+     stub_z = settings_.zmean(stubDisk - 1) * tracklet->disk() / abs(tracklet->disk());
+     stub_phi = tracklet->phi0() - (stub_z - tracklet->z0()) * tracklet_rinv / 2 / tracklet->t();
+@@ -787,7 +791,9 @@
+   double phi0 = trk->phi0();
+   double rcrit = settings_.rcrit();
+   double rinv = trk->rinv();
+-  double phi = phi0 - asin(0.5 * rinv * rcrit);
++  // Tracks that never reach rcrit are rejected in FitTrack; clamp anyway so a
++  // policy change there cannot reintroduce NaN into the phi binning.
++  double phi = phi0 - asin(std::max(-1.0, std::min(1.0, 0.5 * rinv * rcrit)));
+ 
+   //Check between what 2 values in phibins phi is between
+   auto bins = std::upper_bound(phiBins.begin(), phiBins.end(), phi);
+@@ -823,7 +829,9 @@
+   double phi0 = trk->phi0();
+   double rcrit = settings_.rcrit();
+   double rinv = trk->rinv();
+-  double phi = phi0 - asin(0.5 * rinv * rcrit);
++  // Tracks that never reach rcrit are rejected in FitTrack; clamp anyway so a
++  // policy change there cannot reintroduce NaN into the phi binning.
++  double phi = phi0 - asin(std::max(-1.0, std::min(1.0, 0.5 * rinv * rcrit)));
+ 
+   const double phiOverlapSize = settings_.phiOverlapSize();
+   const std::vector<double>& phiBins = settings_.phiBins();
+diff -ruN a/L1Trigger/TrackFindingTracklet/src/TrackDerTable.cc b/L1Trigger/TrackFindingTracklet/src/TrackDerTable.cc
+--- a/L1Trigger/TrackFindingTracklet/src/TrackDerTable.cc	2026-09-14 12:43:37
++++ b/L1Trigger/TrackFindingTracklet/src/TrackDerTable.cc	2026-09-14 12:43:38
+@@ -824,8 +824,14 @@
+ 
+     rnew[i] = ri;
+ 
++    // The table is filled over the full rinv grid, including (layer, rinv) pairs
++    // no track can physically reach; those entries would be NaN. Zero them. Once
++    // projections are gated a track never has a stub there, so they are never
++    // looked up -- this only keeps the table finite.
++    const bool reach = reachesRadius(ri, rinv);
++
+     //first we have the phi position
+-    D[0][j] = -0.5 * ri * ri / sqrt(1 - 0.25 * ri * ri * rinv * rinv) / sigmax;
++    D[0][j] = reach ? -0.5 * ri * ri / sqrt(1 - 0.25 * ri * ri * rinv * rinv) / sigmax : 0.0;
+     D[1][j] = ri / sigmax;
+     D[2][j] = 0.0;
+     D[3][j] = 0.0;
+@@ -836,12 +842,12 @@
+     D[0][j] = 0.0;
+     D[1][j] = 0.0;
+     if (ri < settings.rPS2S()) {
+-      D[2][j] = (2 / rinv) * asin(0.5 * ri * rinv) / sigmazpsbarrel;
++      D[2][j] = reach ? (2 / rinv) * asin(0.5 * ri * rinv) / sigmazpsbarrel : 0.0;
+       D[3][j] = 1.0 / sigmazpsbarrel;
+       sigma[j] = sigmazpsbarrel;
+       kfactor[j] = settings.kz();
+     } else {
+-      D[2][j] = (2 / rinv) * asin(0.5 * ri * rinv) / sigmaz2;
++      D[2][j] = reach ? (2 / rinv) * asin(0.5 * ri * rinv) / sigmaz2 : 0.0;
+       D[3][j] = 1.0 / sigmaz2;
+       sigma[j] = sigmaz2;
+       kfactor[j] = settings.kz();
+diff -ruN a/L1Trigger/TrackFindingTracklet/src/TrackletCalculatorBase.cc b/L1Trigger/TrackFindingTracklet/src/TrackletCalculatorBase.cc
+--- a/L1Trigger/TrackFindingTracklet/src/TrackletCalculatorBase.cc	2026-09-14 12:43:37
++++ b/L1Trigger/TrackFindingTracklet/src/TrackletCalculatorBase.cc	2026-09-14 12:43:38
+@@ -181,6 +181,12 @@
+                                        double& zproj,
+                                        double& phider,
+                                        double& zder) {
++  // Unreachable layer: barrelSeeding skips it, so these outputs are never
++  // consumed. Zero them rather than leave NaN (and inf exactly at x = 1).
++  if (!reachesRadius(rproj, rinv)) {
++    phiproj = zproj = phider = zder = 0.0;
++    return;
++  }
+   phiproj = phi0 - asin(0.5 * rproj * rinv);
+   zproj = z0 + (2 * t / rinv) * asin(0.5 * rproj * rinv);
+ 
+@@ -304,6 +310,12 @@
+ }
+ 
+ bool TrackletCalculatorBase::inSector(int iphi0, int irinv, double phi0approx, double rinvapprox) {
++  // POLICY POINT. A track that never reaches rcrit (pT < 0.314 GeV at rcrit =
++  // 55 cm) has no phi there. Rejecting keeps today's effective floor, but
++  // explicitly instead of through NaN. To keep such tracks, evaluate the sector
++  // test at a smaller radius here AND in FitTrack.cc, consistently.
++  if (!reachesRadius(settings_.rcrit(), rinvapprox))
++    return false;
+   double phicritapprox = phi0approx - asin(0.5 * settings_.rcrit() * rinvapprox);
+ 
+   int ifactor = 0.5 * settings_.rcrit() * settings_.krinvpars() / settings_.kphi0pars() * (1 << 8);
+@@ -573,7 +585,16 @@
+     return false;
+   }
+ 
++  // Curvature in physical units from the SAME fixed-point value the projections
++  // were computed from, so this gate agrees with what the firmware sees.
++  const double rinvgate = irinv * ITC->rinv_final.K();
+   for (unsigned int i = 0; i < N_LAYER - 2; ++i) {
++    // Skip layers the track never reaches. Without this the IMATH projection to
++    // such a layer is finite garbage; when it lands inside the bit range it
++    // passes the checks below, gets matched to stubs, and addLayerProj trips
++    // assert(!fpgaphi.atExtreme()).
++    if (!reachesRadius(settings_.rmean(settings_.projlayers(iSeed_, i) - 1), rinvgate))
++      continue;
+     //reject projection if z is out of range
+     if (izproj[i] < -(1 << (settings_.nzbitsstub(0) - 1)))
+       continue;
+diff -ruN a/L1Trigger/TrackFindingTracklet/src/TrackletConfigBuilder.cc b/L1Trigger/TrackFindingTracklet/src/TrackletConfigBuilder.cc
+--- a/L1Trigger/TrackFindingTracklet/src/TrackletConfigBuilder.cc	2026-09-14 12:43:37
++++ b/L1Trigger/TrackFindingTracklet/src/TrackletConfigBuilder.cc	2026-09-14 12:43:38
+@@ -428,7 +428,10 @@
+   if (std::abs(rhoinv) > rinvmax_) {
+     rhoinv = rinvmax_ * rhoinv / std::abs(rhoinv);
+   }
+-  return phi1 + asin(0.5 * r * rhoinv) - asin(0.5 * r1 * rhoinv);
++  // rhoinv is already clamped to rinvmax_ above; once rinvmax_ corresponds to a
++  // pT below what reaches r, clamp the asin arguments too.
++  return phi1 + asin(std::max(-1.0, std::min(1.0, 0.5 * r * rhoinv))) -
++         asin(std::max(-1.0, std::min(1.0, 0.5 * r1 * rhoinv)));
+ }
+ 
+ //--- Helper function to calculate rinv for two stubs at (r1,phi1) and (r2,phi2)
+diff -ruN a/L1Trigger/TrackFindingTracklet/src/TrackletProcessor.cc b/L1Trigger/TrackFindingTracklet/src/TrackletProcessor.cc
+--- a/L1Trigger/TrackFindingTracklet/src/TrackletProcessor.cc	2026-09-14 12:43:37
++++ b/L1Trigger/TrackFindingTracklet/src/TrackletProcessor.cc	2026-09-14 12:43:38
+@@ -59,7 +59,11 @@
+     }
+   }
+ 
+-  double dphimax = asin(0.5 * settings_.maxrinv() * rmax) - asin(0.5 * settings_.maxrinv() * rmin);
++  // Once ptmin_ is low enough that maxrinv exceeds 2/rmax, the outer layer is
++  // out of reach for the highest-curvature tracks. Clamp so the VM binning
++  // setup stays finite instead of NaN.
++  double dphimax = asin(std::min(1.0, 0.5 * settings_.maxrinv() * rmax)) -
++                   asin(std::min(1.0, 0.5 * settings_.maxrinv() * rmin));
+ 
+   //number of fine phi bins in sector
+   int nfinephibins =
