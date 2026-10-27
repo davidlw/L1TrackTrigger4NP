@@ -65,53 +65,44 @@ commented out for reproducing the existing samples. Regenerating from step 2 is
 required to study the sub-GeV region.
 
 ## Producing L1 track ntuple with clusters information:
-
+To load and compile the updated low-pt L1 Track Trigger Code on lxplus: 
+```
 cmsrel CMSSW_15_1_0_patch3
-
 cd CMSSW_15_1_0_patch3/src
-
 cmsenv
-
 git cms-addpkg L1Trigger/TrackFindingTracklet
-
 git cms-addpkg L1Trigger/TrackTrigger/
-
 git cms-addpkg L1Trigger/TrackerDTC/
-
 git cms-addpkg L1Trigger/TrackFindingTMTT/
-
 git cms-addpkg SimTracker/TrackTriggerAssociation/
-
 scram b -j4
-
 git clone https://github.com/davidlw/L1TrackTrigger4NP
-
 cp L1TrackTrigger4NP/L1Trigger/TrackFindingTracklet/python/* L1Trigger/TrackFindingTracklet/python/
-
 cp L1TrackTrigger4NP/L1Trigger/TrackFindingTracklet/test/* L1Trigger/TrackFindingTracklet/test/ 
-
 cp L1TrackTrigger4NP/L1Trigger/TrackFindingTracklet/interface/* L1Trigger/TrackFindingTracklet/interface/
-
 cp L1TrackTrigger4NP/L1Trigger/TrackFindingTracklet/plugins/* L1Trigger/TrackFindingTracklet/plugins/
-
 cp L1TrackTrigger4NP/L1Trigger/TrackFindingTracklet/src/* L1Trigger/TrackFindingTracklet/src/
-
 cp L1TrackTrigger4NP/L1Trigger/TrackTrigger/plugins/* L1Trigger/TrackTrigger/plugins
-
 cp L1TrackTrigger4NP/L1Trigger/TrackTrigger/python/* L1Trigger/TrackTrigger/python/
-
 cp L1TrackTrigger4NP/L1Trigger/TrackTrigger/src/* L1Trigger/TrackTrigger/src/
-
 cp L1TrackTrigger4NP/L1Trigger/TrackFindingTMTT/src/* L1Trigger/TrackFindingTMTT/src/
-
 cp L1TrackTrigger4NP/L1Trigger/TrackerDTC/src/* L1Trigger/TrackerDTC/src/
-
 cp L1TrackTrigger4NP/SimTracker/TrackTriggerAssociation/plugins/* SimTracker/TrackTriggerAssociation/plugins/
-
 cmsenv
-
 scram b -j4
-
+```
+To run over a few files locally:
+```
 cd L1TrackTrigger4NP/configurations
-
+cmsenv
 cmsRun rerunL1_trackhitntuple_cfg.py 
+```
+
+To run over all the files using crab:
+```
+cd L1TrackTrigger4NP/configurations
+cmsenv
+voms-proxy-init -voms cms 
+crab submit -c crab_trackhitntuple_cfg.py
+```
+
